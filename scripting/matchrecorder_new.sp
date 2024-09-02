@@ -1,6 +1,5 @@
 #include <sourcemod>
 #include <sdktools>
-// #include <sdkhooks>
 #include <smjansson>
 #include <steamworks>
 #include <d2c>
@@ -25,7 +24,7 @@
 //# export class GameResultsEvent {
 //#   constructor(
 //#     public readonly matchId: number,
-//#     public readonly radiantWin: boolean,
+//#     public readonly winner: DotaTeam,
 //#     public readonly duration: number,
 //#     public readonly type: MatchmakingMode,
 //#     public readonly timestamp: number,
@@ -67,6 +66,7 @@ public void OnPluginStart()
 	AddCommandListener(Command_Say, "say");
 	AddCommandListener(Command_Say, "say_team");
 
+	// I don't like it, but it works
 	CreateTimer(10.0, SetPlayersToStartGame);
 }
 
@@ -82,7 +82,7 @@ public void ReadMatchData(){
 	match_id = json_object_get_int(matchData, "matchId");
 	game_mode = json_object_get_int(matchData, "mode");
 	PrintToServer("Match ID: %d", match_id);
-	PrintToServer("Mode: %d", match_id);
+	PrintToServer("Mode: %d", game_mode);
 
 
 	Handle players = json_object_get(matchData, "players");
@@ -204,8 +204,6 @@ public bool PlayerInMatchJSON(Handle hObj, int index){
 
 	json_object_set_new(hObj, "items", hArray);
 
-//	CreatePlayerIfNotExists(steamid);
-//	InsertPlayerInMatch(matchId, steamid, heroName, team, kills, deaths, assists, level, items, gpm, xpm, lastHits, denies);
 	return true
 }
 
@@ -305,11 +303,7 @@ public Action Command_jointeam(int client, const char[] command, int args)
 
 
 public Action SetPlayersToStartGame(Handle timer){
-	if(game_mode == GameMode_Solomid){
-		SetPlayersToStart(2);
-	}else{
-		SetPlayersToStart(10);
-	}
+	SetPlayersToStart(expected_player_count);
 }
 
 
