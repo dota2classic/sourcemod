@@ -5,9 +5,7 @@
 
 #include <sourcemod>
 #include <sdktools>
-//#include <sdkhooks>
-#include <smjansson>
-#include <steamworks>
+
 #include <base64>
 
 

@@ -1,6 +1,5 @@
 #include <sourcemod>
 #include <sdktools>
-#include <smjansson>
 #include <d2c>
 #include <ripext>
 
@@ -92,7 +91,10 @@ public int GetAssignedPlayerTeamID(int index){
 
 public int GetAssignedPlayerSteamID(int index){
 	JSONObject plr = GetPlayer(index);
-	return plr.GetInt("steam32");
+	char buffer[32];
+	JSONObject pid = plr.Get("playerId");
+	pid.GetString("value", buffer, sizeof(buffer));
+	return StringToInt(buffer);	
 }
 
 
