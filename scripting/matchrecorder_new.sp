@@ -347,7 +347,11 @@ public int GetTeamForSteamID(int steamId){
 	for(int iElement = 0; iElement < players.Length; iElement++) {
 		JSONObject plr = players.Get(iElement);
 		
-		int check = plr.GetInt("steam32");
+		char buffer[32];
+		JSONObject pid = plr.Get("playerId");
+		pid.GetString("value", buffer, sizeof(buffer));
+		
+		int check = StringToInt(buffer);
 		if(check == steamId){
 			return plr.GetInt("team");
 		}
