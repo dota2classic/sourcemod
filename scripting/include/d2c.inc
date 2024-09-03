@@ -79,23 +79,21 @@ public GetHero(index, String:buffer[40]){
 	GetEntityClassname(heroEntity, buffer, sizeof(buffer));
 }
 
-public bool GetSteamid(index, String:buffer[20]){
+public int GetSteamid(int index){
 	new offset = FindSendPropInfo("CDOTA_PlayerResource", "m_iPlayerSteamIDs");
 	new sid = GetEntData(GetPlayerResourceEntity(), offset + index * 8, 4);
-	if(sid == 0) return false
 	
-	Format(buffer, sizeof(buffer), "[U:1:%d]", sid)
-	return true
+	return sid
 }
 
 public GetPlayersCount(){
 	new heroCount = 0;
 	
 	for (new i = 0; i <= 10; i++){
-		new String:steamid[20]
-		new hasPlayer = GetSteamid(i, steamid)
+	
+		int steamid = GetSteamid(i)
 		
-		if(hasPlayer){
+		if(steamid != 0){
 			heroCount++;
 		}
 	} 

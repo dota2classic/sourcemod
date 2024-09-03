@@ -109,7 +109,7 @@ public void OnClientDisconnect(int client)
 		return;
 	}
 	GetClientName(client, clientNames[playerIndex], 32);
-	CreateTimer(1.0, Timer_CountMinutesDisconnected, playerIndex, 1);
+	CreateTimer(0.1, Timer_CountMinutesDisconnected, playerIndex, 1);
 }
 
 public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
@@ -131,9 +131,9 @@ public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
 		return Plugin_Stop;
 	}
     // Minute passed
-	if ((300 - disconnectTime[playerID] % 60) == 0)
+	if (disconnectTime[playerID] % 60 == 0)
 	{
-		int minutesRemaining = 300 - disconnectTime[playerID] / 60;
+		int minutesRemaining = (300 - disconnectTime[playerID]) / 60;
 		PrintCenterTextAll("%c%s\x01 has %i minutes left to reconnect.", GetPlayerColor(playerID), clientNames[playerID], minutesRemaining);
 	}
 	return Plugin_Continue;
