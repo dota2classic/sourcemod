@@ -4,6 +4,6 @@ data
 gamedata
 extensions
 logs
-plugins
+plugins/*
 translations
 .vscode
