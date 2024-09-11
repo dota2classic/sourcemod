@@ -102,6 +102,9 @@ public JSONObject GetPlayer(int index){
 public void GetAssignedPlayerName(int index, char[] buffer, int bufSize){
 	JSONObject plr = GetPlayer(index);
 	plr.GetString("name", buffer, bufSize);
+	if(strlen(buffer) == 0){
+		strcopy(buffer, bufSize, "Player")
+	}
 }
 
 public int GetAssignedPlayerTeamID(int index){
@@ -393,6 +396,9 @@ public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
 		if(GetPlayersCount() < expected_player_count){
 			// not enough players
 		}
+	}else if(gameState == 7){
+		//Disconnect
+		CreateTimer(5.0, Shutdown);
 	}
 }
 
