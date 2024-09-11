@@ -27,7 +27,6 @@ public GetIntProperty(index, String:prop[]){
 
 public GetDuration(){
 	new non_game_time = RoundFloat(GameRules_GetPropFloat("m_flGameStartTime"))
-	PrintToServer("%d", non_game_time)
 	new total_time = RoundFloat(GameRules_GetPropFloat("m_fGameTime"))
 	return total_time - non_game_time;
 }

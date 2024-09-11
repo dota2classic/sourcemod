@@ -4,7 +4,7 @@
 #include <ripext>
 
 #pragma newdecls required
-
+#pragma dynamic 131072
 
 
 int match_id;
@@ -16,6 +16,7 @@ char callbackURL[1024];
 
 int expected_player_count = 0;
 
+HTTPClient client;
 
 public void OnMapStart()
 {
@@ -42,7 +43,16 @@ public void OnPluginStart()
 	AddCommandListener(Command_Say, "say_team");
 
 	// I don't like it, but it works
+	// Try on map start
 	CreateTimer(10.0, SetPlayersToStartGame);
+	
+	client = new HTTPClient("http://localhost:7777");
+	
+	
+	CreateTimer(4.0, OnGameUpdate, 0, TIMER_REPEAT);
+	
+    RegServerCmd("test1", Command_Test);
+    Test123();
 }
 
 
@@ -102,7 +112,7 @@ public void AssignPlayerSlot(int pr, int steamIdOffset, int teamOffset, int name
 {
 	PrintToServer("Reserve slot for %s at team %d", name, team);
 	SetEntData(pr, i * 8 + steamIdOffset, steamId32, 4, true);
-	SetEntData(pr, i * 8 + steamIdOffset + 4, any:17825793, 4, true);
+	SetEntData(pr, i * 8 + steamIdOffset + 4, any:17825793, 4, true); // steam64 bits
 	SetEntData(pr, i * 4 + teamOffset, team, 4, true);
 	SetEntData(pr, i * 4 + nameOffset, UTIL_AllocPooledString(name), 4, true);
 	return 0;
@@ -176,6 +186,8 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	
 	matchResult.SetInt("last_hits",   GetLasthits(index) );
 	matchResult.SetInt("denies",  GetDenies(index) );
+	
+	// TODO: Add tower damage, hero damage, networth
 
 
 	JSONArray items = new JSONArray();
@@ -190,29 +202,12 @@ public void GenerateMatchResults(){
 
 	int winnerTeam = GameRules_GetProp("m_nGameWinner", 4, 0);
 //
-//	Handle obj = object();
-//	json_object_set_new(obj, "matchId", json_integer(match_id));
-//	json_object_set_new(obj, "winner", json_integer(winnerTeam));
-//	json_object_set_new(obj, "duration", json_integer(GetDuration()));
-//	json_object_set_new(obj, "type", json_integer(lobbyType));
-//	// TODO: somehow infer dota_force_game_mode
-//	json_object_set_new(obj, "gameMode", json_integer(lobbyType));
-//	json_object_set_new(obj, "timestamp", json_integer(GetTime()));
-//	json_object_set_new(obj, "server", json_string(server_url));
-//
-//	json_object_set_new(obj, "players", hArray);
-//	char sJSON[10000];
-//	json_dump(obj, sJSON, sizeof(sJSON), 0);
-//	PrintToServer(sJSON);
-	
-	
 	JSONObject dto = new JSONObject();
 	dto.SetInt("matchId", match_id);
 	dto.SetInt("winner", winnerTeam);
 	dto.SetInt("duration", GetDuration());
 	dto.SetInt("type", lobbyType);
-	// TODO: something
-	dto.SetInt("gameMode", lobbyType);
+	dto.SetInt("gameMode", GameRules_GetProp("m_iGameMode", 4, 0));
 	dto.SetInt("timestamp", GetTime());
 	dto.SetString("server", server_url);
 	
@@ -244,21 +239,9 @@ public void GenerateMatchResults(){
 	dto.ToString(buffer, sizeof(buffer));
 	PrintToServer("%s", buffer);
 	
-	HTTPClient client = new HTTPClient("http://localhost:5001");
 	
 	client.Post("/match_results", dto, OnMatchSaved);
 
-//	Handle request = SteamWorks_CreateHTTPRequest(k_EHTTPMethodPOST, "http://localhost:5001/match_results")
-//	if(request == null){
-//		PrintToServer("Request is null.")
-//		return;
-//	}
-//
-//	SteamWorks_SetHTTPRequestRawPostBody(request, "application/json; charset=UTF-8", sJSON, strlen(sJSON));
-//	SteamWorks_SetHTTPRequestNetworkActivityTimeout(request, 30);
-//	SteamWorks_SetHTTPCallbacks(request, HTTPCompleted, HeadersReceived, HTTPDataReceive);
-//
-//	SteamWorks_SendHTTPRequest(request);
 }
 
 void OnMatchSaved(HTTPResponse response, any value)
@@ -270,6 +253,16 @@ void OnMatchSaved(HTTPResponse response, any value)
     }
 	PrintToChatAll("Матч сохранен.");
 } 
+
+void OnLiveUpdated(HTTPResponse response, any value){
+	
+    if (response.Status != HTTPStatus_Created) {
+        // Failed to retrieve todo
+        PrintToServer("Bad status code %d", response.Status);
+        return;
+    }
+	
+}
 
 public void OnClientPutInServer(int client)
 {
@@ -295,9 +288,6 @@ public Action Command_jointeam(int client, const char[] command, int args)
 	return Plugin_Handled;
 }
 
-
-
-
 public Action SetPlayersToStartGame(Handle timer){
 	SetPlayersToStart(expected_player_count);
 }
@@ -305,7 +295,7 @@ public Action SetPlayersToStartGame(Handle timer){
 
 public Action Command_Test(int args)
 {
-	PrintToServer("%d", match_id)
+	UpdateLiveMatch();
 	return Plugin_Handled;
 }
 
@@ -394,4 +384,156 @@ public void OnMatchFinished(bool shutdown){
 public Action Shutdown(Handle timer)
 {
 	ServerCommand("exit");
+}
+
+// UPDATER
+public bool GetDidRandom(int index)
+{
+	return GetEntProp(GetPlayerResourceEntity(), PropType:0, "m_bHasRandomed", 4, index);
+}
+
+public void GetPosition(int index, float vec[3])
+{
+	GetEntPropVector(index, PropType:0, "m_vecOrigin", vec, 0);
+}
+
+
+public void FillHeroData(JSONObject obj, int hero){
+	
+	// Is Bot?
+
+	// Position on map
+	float vec[3];
+	GetEntPropVector(hero, Prop_Send, "m_vecOrigin", vec);
+	float full = 14144.0;
+	float half = full / 2;
+	
+	obj.SetFloat("pos_x", (vec[0] + half) / full);
+	obj.SetFloat("pos_y", (vec[1] + half) / full);
+	
+	// Angle
+	float angle = GetEntPropFloat(hero, Prop_Send, "m_angRotation[1]");
+	obj.SetFloat("angle", angle);
+	
+	// Hero name
+	char heroname[40];
+	GetEntityClassname(hero, heroname, sizeof(heroname));
+	obj.SetString("hero", heroname)
+	
+	// Level
+	obj.SetInt("level", GetEntProp(hero, Prop_Send, "m_iCurrentLevel"))
+	
+	// Health and mana
+	int max_health = GetEntProp(hero, Prop_Send, "m_iMaxHealth");
+	int health = GetEntProp(hero, Prop_Send, "m_iHealth");
+	obj.SetInt("health", health);
+	obj.SetInt("max_health", max_health);
+	
+	float max_mana = GetEntPropFloat(hero, Prop_Send, "m_flMaxMana");
+	float mana = GetEntPropFloat(hero, Prop_Send, "m_flMana");
+	obj.SetFloat("mana", mana);
+	obj.SetFloat("max_mana", max_mana);
+	
+	
+	// Respawn timer, todo: how it works?>
+	int duration = GetDuration()
+	float respawn_time = GetEntPropFloat(hero, Prop_Send, "m_flRespawnTime");
+	obj.SetFloat("respawn_time", respawn_time);
+	
+	float m_flRespawnTimePenalty = GetEntPropFloat(hero, Prop_Send, "m_flRespawnTimePenalty");
+	obj.SetInt("r_duration", duration);
+	
+	
+	// Items
+	JSONArray items = new JSONArray();
+	char buf[64];
+	for(int i = 0; i < 6; i++){
+		int item = GetEntPropEnt(hero, Prop_Send, "m_hItems", i);
+		if(!IsValidEntity(item)){
+			items.PushString("item_empty");
+		}else {
+			GetEntPropString(item, Prop_Send, "m_iName", buf, sizeof(buf))
+			items.PushString(buf);
+		}
+	}
+	obj.Set("items", items);
+	
+	return obj;
+}
+
+public void FillPlayerData(JSONObject o, int player){
+	o.SetInt("kills", GetKills(player));
+	o.SetInt("deaths", GetDeaths(player));
+	o.SetInt("assists", GetAssists(player));
+	o.SetInt("team", GetTeam(player));
+	
+	
+	
+	// Steam id
+	// int pid = GetEntProp(hero, Prop_Send, "m_iPlayerID")
+	int pid = GetSteamid(player);
+	o.SetInt("steam_id", pid);
+	o.SetBool("bot", pid <= 10);
+	
+}
+
+public Action OnGameUpdate(Handle timer)
+{
+	int gameState = GameRules_GetProp("m_nGameState", 4, 0);
+	if (gameState != 4 && gameState != 5)
+	{
+		return Action:0;
+	}
+	UpdateLiveMatch();
+}
+
+
+public void UpdateLiveMatch(){
+	char buffer[32768];
+	
+	JSONObject match = new JSONObject();
+	match.SetInt("match_id", match_id);
+	match.SetInt("matchmaking_mode", lobbyType);
+	match.SetInt("duration", GetDuration());
+	match.SetString("server", server_url);
+	// get it here
+	match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
+	match.SetInt("timestamp", GetTime());
+	
+	
+	
+	JSONArray heroes = new JSONArray();
+	for(int i = 0; i < 10; i++){
+		
+		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
+		if(!IsValidEntity(heroEntity)) continue;
+		
+		JSONObject o = new JSONObject();
+		FillHeroData(o, heroEntity);	
+		FillPlayerData(o, i);
+		
+		heroes.Push(o);
+		
+//		o.ToString(buffer, sizeof(buffer));
+//		PrintToServer(buffer);
+	}
+	
+	match.Set("heroes", heroes);
+
+	
+//	match.ToString(buffer, sizeof(buffer));
+//	PrintToServer(buffer);
+		
+	client.Post("live_match", match, OnLiveUpdated);
+	
+	
+}
+
+void Test123(){
+	
+	
+	int i = -1;
+	int ent = FindEntityByClassname(i, "npc_dota_tower")
+	
+	PrintToServer("%d ent", ent);
 }
