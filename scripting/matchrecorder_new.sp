@@ -197,6 +197,10 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	
 	
 	
+	int conStatus = GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, index);
+	matchResult.SetBool("abandon", conStatus == 3)
+	
+	
 	
 	// Note: i think we have to parse logs...
 	// TODO: Add tower damage, hero damage
