@@ -554,10 +554,10 @@ void Test123(){
 //	
 //		PrintToServer("[%d] %d networth", i, totalGold);
 //	}
-	for(int i = 0; i < 10; i++){
-		PrintToServer("%d events", GetIntProperty(i, "m_iMetaLevel"));
-		
-	}
+//	for(int i = 0; i < 10; i++){
+//		PrintToServer("%d events", GetIntProperty(i, "m_iMetaLevel"));
+//		
+//	}
 
 //
 //	for(int i = 0; i < 5000; i++){
