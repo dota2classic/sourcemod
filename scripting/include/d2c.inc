@@ -24,6 +24,10 @@ public GetIntProperty(index, String:prop[]){
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, prop, 4, index)
 }
 
+public Float:GetFloatProperty(index, String:prop[]){
+	return GetEntPropFloat(GetPlayerResourceEntity(), Prop_Send, prop, index)
+}
+
 
 public GetDuration(){
 	new non_game_time = RoundFloat(GameRules_GetPropFloat("m_flGameStartTime"))
@@ -31,6 +35,10 @@ public GetDuration(){
 	return total_time - non_game_time;
 }
 
+public int GetNetworth(index){
+	int spec = FindEntityByClassname(-1, "dota_data_spectator");
+	return GetEntProp(spec, Prop_Send, "m_iNetWorth", 4, index);
+}
 
 public GetXPM(index){
 	new totalEarned = GetIntProperty(index, "m_iTotalEarnedXP")

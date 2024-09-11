@@ -36,6 +36,7 @@ public void OnPluginStart()
 	
 	HookEvent("dota_match_done", OnMatchFinish, EventHookMode:0);
 	HookEvent("game_rules_state_change", OnMatchStart, EventHookMode:0)
+	
 
 	AddCommandListener(Command_jointeam, "jointeam");
 
@@ -185,9 +186,21 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	matchResult.SetInt("xpm",   GetXPM(index) );
 	
 	matchResult.SetInt("last_hits",   GetLasthits(index) );
-	matchResult.SetInt("denies",  GetDenies(index) );
+	matchResult.SetInt("denies",  GetDenies(index));
 	
-	// TODO: Add tower damage, hero damage, networth
+	matchResult.SetInt("tower_kills", GetIntProperty(index, "m_iTowerKills"));
+	matchResult.SetInt("roshan_kills", GetIntProperty(index, "m_iRoshanKills"));
+	matchResult.SetFloat("roshan_kills", GetFloatProperty(index, "m_fHealing"));
+	
+	
+	matchResult.SetInt("networth", GetNetworth(index));
+	
+	
+	
+	
+	// Note: i think we have to parse logs...
+	// TODO: Add tower damage, hero damage
+	
 
 
 	JSONArray items = new JSONArray();
@@ -240,13 +253,13 @@ public void GenerateMatchResults(){
 	PrintToServer("%s", buffer);
 	
 	
-	client.Post("/match_results", dto, OnMatchSaved);
+	client.Post("match_results", dto, OnMatchSaved);
 
 }
 
 void OnMatchSaved(HTTPResponse response, any value)
 {
-    if (response.Status != HTTPStatus_OK) {
+    if (response.Status != HTTPStatus_Created) {
         // Failed to retrieve todo
         PrintToServer("Bad status code %d", response.Status);
         return;
@@ -295,7 +308,7 @@ public Action SetPlayersToStartGame(Handle timer){
 
 public Action Command_Test(int args)
 {
-	UpdateLiveMatch();
+	GenerateMatchResults();
 	return Plugin_Handled;
 }
 
@@ -468,9 +481,7 @@ public void FillPlayerData(JSONObject o, int player){
 	o.SetInt("team", GetTeam(player));
 	
 	
-	
-	// Steam id
-	// int pid = GetEntProp(hero, Prop_Send, "m_iPlayerID")
+
 	int pid = GetSteamid(player);
 	o.SetInt("steam_id", pid);
 	o.SetBool("bot", pid <= 10);
@@ -532,8 +543,34 @@ public void UpdateLiveMatch(){
 void Test123(){
 	
 	
-	int i = -1;
-	int ent = FindEntityByClassname(i, "npc_dota_tower")
+//	int i = -1;
+//	int ent = FindEntityByClassname(i, "npc_dota_tower");
+
+//	PrintToServer("Hey :)")
+//	int spec = FindEntityByClassname(-1, "dota_data_spectator");
+//	
+//	for(int i = 0; i < 10; i++){
+//			int totalGold = GetEntProp(spec, Prop_Send, "m_iNetWorth", 4, i);
+//	
+//		PrintToServer("[%d] %d networth", i, totalGold);
+//	}
+	for(int i = 0; i < 10; i++){
+		PrintToServer("%d events", GetIntProperty(i, "m_iMetaLevel"));
+		
+	}
+
+//
+//	for(int i = 0; i < 5000; i++){
+//		if(!IsValidEntity(i)) continue;
+//		
+//		char nc[64];
+//		GetEntityNetClass(i, nc, sizeof(nc));
+//		
+//		if(!strcmp(nc, "CDOTA_DataSpectator", false)){
+//			GetEntityClassname(i, nc, sizeof(nc))
+//			PrintToServer("%s c", nc);
+//		}
+//	}
 	
-	PrintToServer("%d ent", ent);
+
 }
