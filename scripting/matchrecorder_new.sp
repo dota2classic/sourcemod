@@ -22,6 +22,15 @@ public void OnMapStart()
 {
 	PrintToServer("Map start called");
     PopulatePlayerDataInPlayerResource();
+//    SetPlayersToStartGame();
+
+    SetPlayersToStart(expected_player_count);
+    
+    PrintToServer("lobby type is: %d", lobbyType)
+    if(lobbyType == 7){
+    	// Bot lobby
+	PopulateBots(4);
+    }
 }
 
 public void OnPluginStart()
@@ -45,7 +54,7 @@ public void OnPluginStart()
 
 	// I don't like it, but it works
 	// Try on map start
-	CreateTimer(10.0, SetPlayersToStartGame);
+//	CreateTimer(10.0, SetPlayersToStartGame);
 	
 	client = new HTTPClient("http://localhost:7777");
 	
@@ -144,7 +153,7 @@ public void PopulatePlayerDataInPlayerResource()
 	int direIndex = 5;
 	char name[32];
 	JSONArray players = GSMatchInfo.Get("players");
-	for(int i =0;i < players.Length; i++)
+	for(int i = 0;i < players.Length; i++)
 	{
 		GetAssignedPlayerName(i, name, sizeof(name));
 		int teamID = GetAssignedPlayerTeamID(i);
@@ -164,7 +173,8 @@ public void PopulatePlayerDataInPlayerResource()
 public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	
 	int steamid = GetSteamid(index)
-	bool hasPlayer = steamid != 0;
+		
+	bool hasPlayer = IsValidEntity(GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", index));
 
 	if(!hasPlayer){
 		return false;
@@ -232,7 +242,7 @@ public void GenerateMatchResults(){
 	
 	int heroCount = 0;
 
-	for (int i = 0; i <= 10; i++){
+	for (int i = 0; i < 10; i++){
 		PrintToServer("Saving for player %d", i)
 		JSONObject playerObject = new JSONObject();
 		
@@ -257,6 +267,7 @@ public void GenerateMatchResults(){
 	PrintToServer("%s", buffer);
 	
 	
+	return;
 	client.Post("match_results", dto, OnMatchSaved);
 
 }
@@ -304,10 +315,10 @@ public Action Command_jointeam(int client, const char[] command, int args)
 {
 	return Plugin_Handled;
 }
-
-public Action SetPlayersToStartGame(Handle timer){
-	SetPlayersToStart(expected_player_count);
-}
+//
+//public Action SetPlayersToStartGame(Handle timer){
+//	
+//}
 
 
 public Action Command_Test(int args)
@@ -326,7 +337,7 @@ public void GetItems(int index, JSONArray items){
 
 		char classname[200];
 		if (!IsValidEntity(item)){
-			classname = "item_emptyitembg"
+			classname = "item_empty"
 		}else{
 			GetEdictClassname(item, classname, sizeof(classname));
 		}

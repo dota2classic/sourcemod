@@ -112,6 +112,12 @@ public SetPlayersToStart(int toStart)
     PrintToServer("Server command executed(wait for load count)");
 }
 
+public PopulateBots(int difficulty)
+{
+	ServerCommand("dota_bot_set_difficulty %d", difficulty);
+    ServerCommand("dota_bot_populate");
+    PrintToServer("Server command executed(populate bots)");
+}
 
 
 void GetCommandLineParamStr(const char[] param, char[] value, int maxlen, const char[] defValue, char endSymbol = ' ', bool includeEndSymbol = false)
