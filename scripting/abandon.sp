@@ -96,7 +96,7 @@ public void OnClientDisconnect(int client)
 	bool isPlayer = teamId == 2 || teamId == 3;
 	if (!isPlayer)
 	{
-		return;
+		return; 
 	}
 	int steamID32 = GetSteamAccountID(client, true);
 	if (0 >= steamID32)
@@ -109,7 +109,7 @@ public void OnClientDisconnect(int client)
 		return;
 	}
 	GetClientName(client, clientNames[playerIndex], 32);
-	CreateTimer(0.1, Timer_CountMinutesDisconnected, playerIndex, 1);
+	CreateTimer(1, Timer_CountMinutesDisconnected, playerIndex, 1);
 }
 
 public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
