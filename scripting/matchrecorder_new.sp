@@ -269,10 +269,7 @@ public void GenerateMatchResults(){
 	dto.ToString(buffer, sizeof(buffer));
 	PrintToServer("%s", buffer);
 	
-	
-	return;
 	client.Post("match_results", dto, OnMatchSaved);
-
 }
 
 void OnMatchSaved(HTTPResponse response, any value)
