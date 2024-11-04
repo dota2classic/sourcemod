@@ -13,6 +13,7 @@ char server_url[128];
 JSONObject matchData;
 JSONObject GSMatchInfo;
 char callbackURL[1024];
+char logfile[256];
 
 int expected_player_count = 0;
 
@@ -51,12 +52,16 @@ public void OnPluginStart()
 
 	AddCommandListener(Command_Say, "say");
 	AddCommandListener(Command_Say, "say_team");
-
-	// I don't like it, but it works
-	// Try on map start
-//	CreateTimer(10.0, SetPlayersToStartGame);
 	
 	client = new HTTPClient("http://localhost:7777");
+	
+	GetCommandLineParamStr("+con_logfile", logfile, 256, "logs/");
+	if (StrContains(logfile, ".log", true) == -1)
+	{
+		StrCat(logfile, sizeof(logfile), ".log");
+	}
+	
+	PrintToServer("LogFile %s", logfile);
 	
 	
 	CreateTimer(4.0, OnGameUpdate, 0, TIMER_REPEAT);
@@ -543,19 +548,13 @@ public void UpdateLiveMatch(){
 		
 		heroes.Push(o);
 		
-//		o.ToString(buffer, sizeof(buffer));
-//		PrintToServer(buffer);
 	}
 	
 	match.Set("heroes", heroes);
-
-	
-//	match.ToString(buffer, sizeof(buffer));
-//	PrintToServer(buffer);
 		
 	client.Post("live_match", match, OnLiveUpdated);
 	
-	
+	CloseHandle(match);
 }
 
 void Test123(){
