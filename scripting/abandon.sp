@@ -1,11 +1,8 @@
-
-
 #include <sdkhooks>
 #include <sdktools>
 
 #pragma newdecls required
 
-bool pluginIsActive;
 int disconnectTime[10];
 char clientNames[10][32];
 char playerColors[12];
@@ -59,8 +56,6 @@ public void OnPluginStart()
 {
     PrintToServer("Start abandon plugin");
 	InitPlayerColors();
-	// CreateTimer(5.0, HookGameRulesStateChange);
-    HookEvent("game_rules_state_change", OnGameStateChange, EventHookMode_Post);
     PrintToServer("Hook called");
 }
 
@@ -71,24 +66,15 @@ public void OnMapStart()
     }
 }
 
-public Action HookGameRulesStateChange(Handle timer)
-{
-	
-	return Plugin_Continue;
-}
-
-public Action OnGameStateChange(Handle event, char[] name, bool dontBroadcast)
-{
+public bool IsActive(){
 	int gameState = GameRules_GetProp("m_nGameState", 4, 0);
-	pluginIsActive = gameState > 1 && gameState < 6;
-    PrintToServer("Game state %d is active? %b", gameState, pluginIsActive);
-	return Plugin_Continue;
+	return gameState > 1 && gameState < 6;
 }
 
 public void OnClientDisconnect(int client)
 {
-    PrintToServer("On disconnect");
-	if (!pluginIsActive || IsFakeClient(client))
+    PrintToServer("On disconnect %b %b", IsActive(), IsFakeClient(client));
+	if (!IsActive() || IsFakeClient(client))
 	{
 		return;
 	}
@@ -99,7 +85,7 @@ public void OnClientDisconnect(int client)
 		return; 
 	}
 	int steamID32 = GetSteamAccountID(client, true);
-	if (0 >= steamID32)
+	if (steamID32 <= 0)
 	{
 		return;
 	}
@@ -109,12 +95,13 @@ public void OnClientDisconnect(int client)
 		return;
 	}
 	GetClientName(client, clientNames[playerIndex], 32);
-	CreateTimer(1, Timer_CountMinutesDisconnected, playerIndex, 1);
+	PrintToServer("Create timer called!")
+	CreateTimer(1.0, Timer_CountMinutesDisconnected, playerIndex, TIMER_REPEAT);
 }
 
-public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
+public Action Timer_CountMinutesDisconnected(Handle timer, int playerID)
 {
-	bool isConnected = GetEntProp(GetPlayerResourceEntity(), PropType:0, "m_iConnectionState", 4, playerID) == 2;
+	bool isConnected = GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, playerID) == 2;
 	if (isConnected)
 	{
 		return Plugin_Stop;
@@ -123,8 +110,11 @@ public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
 	{
 		return Plugin_Continue;
 	}
+
 	disconnectTime[playerID]++;
-    PrintToServer("Disconnect timer %d", disconnectTime[playerID]);
+
+    // PrintToServer("Disconnect timer %d", disconnectTime[playerID]);
+    
 	if (disconnectTime[playerID] >= 300)
 	{
 		AbandonPlayer(playerID);
@@ -136,13 +126,14 @@ public Action Timer_CountMinutesDisconnected(Handle timer,int playerID)
 		int minutesRemaining = (300 - disconnectTime[playerID]) / 60;
 		PrintCenterTextAll("%c%s\x01 has %i minutes left to reconnect.", GetPlayerColor(playerID), clientNames[playerID], minutesRemaining);
 	}
+	
 	return Plugin_Continue;
 }
 
 public void AbandonPlayer(int playerID)
 {
 	int steamID32 = GetPlayerSteamID(playerID);
-	SetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", any:4, 4, playerID);
+	SetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, 4, playerID);
 	PrintCenterTextAll("%c%s\x01 has abandoned the game.", GetPlayerColor(playerID), clientNames[playerID]);
 	PrintToServer("Player Abandoned: %i, %s", steamID32, clientNames[playerID]);
 }

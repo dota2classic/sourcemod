@@ -59,6 +59,17 @@ public GetLasthits(index){
 	return GetIntProperty(index, "m_iLastHitCount");
 }
 
+//DOTA_CONNECTION_STATE_UNKNOWN = 0
+//DOTA_CONNECTION_STATE_NOT_YET_CONNECTED = 1
+//DOTA_CONNECTION_STATE_CONNECTED = 2
+//DOTA_CONNECTION_STATE_DISCONNECTED = 3
+//DOTA_CONNECTION_STATE_ABANDONED = 4
+//DOTA_CONNECTION_STATE_LOADING = 5
+//DOTA_CONNECTION_STATE_FAILED = 6
+public GetConnectionState(index){
+	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, index)
+}
+
 public GetLevel(index){
 	return GetIntProperty(index, "m_iLevel");
 }

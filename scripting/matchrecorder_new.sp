@@ -7,6 +7,23 @@
 #pragma dynamic 131072
 
 
+
+// enum DOTA_GameState : int {
+//   DOTA_GAMERULES_STATE_INIT = 0,
+//   DOTA_GAMERULES_STATE_WAIT_FOR_PLAYERS_TO_LOAD = 1,
+//   DOTA_GAMERULES_STATE_HERO_SELECTION = 2,
+//   DOTA_GAMERULES_STATE_STRATEGY_TIME = 3,
+//   DOTA_GAMERULES_STATE_PRE_GAME = 4,
+//   DOTA_GAMERULES_STATE_GAME_IN_PROGRESS = 5,
+//   DOTA_GAMERULES_STATE_POST_GAME = 6,
+//   DOTA_GAMERULES_STATE_DISCONNECT = 7,
+//   DOTA_GAMERULES_STATE_TEAM_SHOWCASE = 8,
+//   DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP = 9,
+//   DOTA_GAMERULES_STATE_WAIT_FOR_MAP_TO_LOAD = 10,
+//   DOTA_GAMERULES_STATE_SCENARIO_SETUP = 11,
+//   DOTA_GAMERULES_STATE_LAST = 12
+// }
+
 int match_id;
 int lobbyType;
 char server_url[128];
@@ -30,7 +47,7 @@ public void OnMapStart()
     PrintToServer("lobby type is: %d", lobbyType)
     if(lobbyType == 7){
     	// Bot lobby
-	PopulateBots(4);
+		PopulateBots(4);
     }
 }
 
@@ -67,7 +84,7 @@ public void OnPluginStart()
 	CreateTimer(4.0, OnGameUpdate, 0, TIMER_REPEAT);
 	
     RegServerCmd("test1", Command_Test);
-    Test123();
+//    Test123();
 }
 
 
@@ -98,6 +115,7 @@ public void ReadMatchData(){
 	
 	
 }
+
 
 public JSONObject GetPlayer(int index){
 	JSONArray players = GSMatchInfo.Get("players")	
@@ -192,6 +210,14 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	GetHero(index, heroName)
 
 	matchResult.SetString("hero", heroName);
+	
+	bool hasParty = GetPartyIdForSteamId(steamid, heroName, sizeof(heroName));
+	if(hasParty){
+		matchResult.SetString("party_id", heroName);
+	} else {
+		matchResult.SetNull("party_id")
+	}
+	
 	matchResult.SetInt("steam_id", steamid);
 	matchResult.SetInt("team",  GetTeam(index) );
 	matchResult.SetInt("level",  GetLevel(index) );
@@ -215,15 +241,9 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	
 	
 	
-	int conStatus = GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, index);
-	matchResult.SetBool("abandon", conStatus == 3)
+	int conStatus = GetConnectionState(index);
+	matchResult.SetInt("connection", conStatus);
 	
-	
-	
-	// Note: i think we have to parse logs...
-	// TODO: Add tower damage, hero damage
-	
-
 
 	JSONArray items = new JSONArray();
 
@@ -233,10 +253,11 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	return true;
 }
 
-public void GenerateMatchResults(){
+public void GenerateMatchResults(bool save){
 
 	int winnerTeam = GameRules_GetProp("m_nGameWinner", 4, 0);
 //
+	
 	JSONObject dto = new JSONObject();
 	dto.SetInt("matchId", match_id);
 	dto.SetInt("winner", winnerTeam);
@@ -251,11 +272,10 @@ public void GenerateMatchResults(){
 	int heroCount = 0;
 
 	for (int i = 0; i < 10; i++){
-		PrintToServer("Saving for player %d", i)
 		JSONObject playerObject = new JSONObject();
 		
 		bool good = PlayerInMatchJSON(playerObject, i);
-		PrintToServer("%d", good);
+		PrintToServer("PIM [%d] processed, ok: %d", i, good);
 		if(good){
 			players.Push(playerObject);
 			heroCount++;
@@ -274,7 +294,9 @@ public void GenerateMatchResults(){
 	dto.ToString(buffer, sizeof(buffer));
 	PrintToServer("%s", buffer);
 	
-	client.Post("match_results", dto, OnMatchSaved);
+	if(save){
+		client.Post("match_results", dto, OnMatchSaved);
+	}
 }
 
 void OnMatchSaved(HTTPResponse response, any value)
@@ -320,15 +342,12 @@ public Action Command_jointeam(int client, const char[] command, int args)
 {
 	return Plugin_Handled;
 }
-//
-//public Action SetPlayersToStartGame(Handle timer){
-//	
-//}
 
 
 public Action Command_Test(int args)
 {
-	GenerateMatchResults();
+	GenerateMatchResults(false);
+//	Tests()
 	return Plugin_Handled;
 }
 
@@ -361,7 +380,17 @@ public Action Command_Say(int client, const char[] command, int argc)
 	if(!strcmp(sayString,"-savematch",false))
 	{
 		// PopulatePlayerDataInPlayerResource();
-		OnMatchFinished(false);
+		// OnMatchFinished(false);
+		Tests();
+	}
+}
+
+
+public void Tests(){
+	PrintToServer("Stats");
+	for (int i = 0; i < 10; i++){
+		int some = GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, i);
+		PrintToServer("%d %b", some, some);
 	}
 }
 
@@ -383,6 +412,25 @@ public int GetTeamForSteamID(int steamId){
 	return -1;
 }
 
+public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
+	JSONArray players = GSMatchInfo.Get("players");
+	for(int iElement = 0; iElement < players.Length; iElement++) {
+		JSONObject plr = players.Get(iElement);
+		
+		char buffer[32];
+		JSONObject pid = plr.Get("playerId");
+		pid.GetString("value", buffer, sizeof(buffer));
+		
+		int check = StringToInt(buffer);
+		if(check == steamId){
+			plr.GetString("partyId", partyId, partyIdSize);
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 
 
 
@@ -391,6 +439,7 @@ public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
 	
 	// GameRules
 
+	PrintToServer("GameRules change to: %d", gameState);
 
 	if(gameState == 3){
 		// HERO_SELECTION
@@ -400,9 +449,46 @@ public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
 		}
 	}else if(gameState == 7){
 		//Disconnect
-		CreateTimer(5.0, Shutdown);
+		// 
+		PrintToServer("FAILED TO LOAD SOME SHIT");
+		// Detect leavers
+		OnFailedMatch();
 	}
 }
+
+public Action OnFailedMatch(){
+	// Report what caused failed match(who didnt load)
+	JSONArray plrs = new JSONArray();
+	for (int i = 0; i < 10; i++){
+		JSONObject plr = new JSONObject();
+		int pid = GetSteamid(i);
+		if(pid == 0) continue;
+		plr.SetInt("connection", GetConnectionState(i));
+		plr.SetInt("steam_id", pid);
+		
+		char party_id[64];
+		bool good = GetPartyIdForSteamId(pid, party_id, sizeof(party_id));
+		if(good){
+			plr.SetString("party_id", party_id);
+		} else {
+			plr.SetNull("party_id");
+		}
+		
+		plrs.Push(plr);
+		
+	}
+	
+	JSONObject dto = new JSONObject();
+	dto.Set("players", plrs);
+	dto.SetInt("match_id", match_id);
+	dto.SetString("server", server_url);
+	
+	client.Post("failed_match", dto, OnLiveUpdated);
+
+	// And then shutdown
+	Shutdown(INVALID_HANDLE);
+}
+
 
 public Action OnMatchFinish(Handle event, char[] name, bool dontBroadcast){
 	OnMatchFinished(true);
@@ -414,7 +500,7 @@ public void OnMatchFinished(bool shutdown){
 		CreateTimer(60.0, Shutdown);
 		PrintToChatAll("Сервер отключится через минуту");
 	}
-	GenerateMatchResults();
+	GenerateMatchResults(true);
 }
 
 public Action Shutdown(Handle timer)
@@ -508,6 +594,11 @@ public void FillPlayerData(JSONObject o, int player){
 	int pid = GetSteamid(player);
 	o.SetInt("steam_id", pid);
 	o.SetBool("bot", pid <= 10);
+
+
+	char party_id[64];
+	GetPartyIdForSteamId(pid, party_id, sizeof(party_id));
+	o.SetString("party_id", party_id)
 	
 }
 
