@@ -29,6 +29,7 @@ int lobbyType;
 char server_url[128];
 JSONObject matchData;
 JSONObject GSMatchInfo;
+
 char callbackURL[1024];
 char logfile[256];
 
@@ -53,7 +54,6 @@ public void OnMapStart()
 
 public void OnPluginStart()
 {
-
 	int iPort = GetConVarInt(FindConVar( "hostport" ));
 
 	PrintToServer("PLUGIN LOADED %d", iPort);
@@ -309,15 +309,7 @@ void OnMatchSaved(HTTPResponse response, any value)
 	PrintToChatAll("Матч сохранен.");
 } 
 
-void OnLiveUpdated(HTTPResponse response, any value){
-	
-    if (response.Status != HTTPStatus_Created) {
-        // Failed to retrieve todo
-        PrintToServer("Bad status code %d", response.Status);
-        return;
-    }
-	
-}
+
 
 public void OnClientPutInServer(int client)
 {
@@ -413,6 +405,7 @@ public int GetTeamForSteamID(int steamId){
 }
 
 public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
+	bool success = false;
 	JSONArray players = GSMatchInfo.Get("players");
 	for(int iElement = 0; iElement < players.Length; iElement++) {
 		JSONObject plr = players.Get(iElement);
@@ -421,14 +414,22 @@ public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
 		JSONObject pid = plr.Get("playerId");
 		pid.GetString("value", buffer, sizeof(buffer));
 		
+		delete pid;
+		
 		int check = StringToInt(buffer);
 		if(check == steamId){
 			plr.GetString("partyId", partyId, partyIdSize);
-			return true;
+			success = true;
+			delete plr;
+			break;
 		}
+		
+		delete plr;
 	}
 	
-	return false;
+	delete players;
+	
+	return success;
 }
 
 
@@ -579,6 +580,7 @@ public void FillHeroData(JSONObject obj, int hero){
 		}
 	}
 	obj.Set("items", items);
+	delete items;
 	
 	return obj;
 }
@@ -614,20 +616,20 @@ public Action OnGameUpdate(Handle timer)
 
 
 public void UpdateLiveMatch(){
-	char buffer[32768];
+	JSONObject live_match = new JSONObject();
 	
-	JSONObject match = new JSONObject();
-	match.SetInt("match_id", match_id);
-	match.SetInt("matchmaking_mode", lobbyType);
-	match.SetInt("duration", GetDuration());
-	match.SetString("server", server_url);
-	// get it here
-	match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
-	match.SetInt("timestamp", GetTime());
-	
-	
-	
+	live_match.SetInt("match_id", match_id);
+	live_match.SetInt("matchmaking_mode", lobbyType);
+	live_match.SetInt("duration", GetDuration());
+	live_match.SetString("server", server_url);
+//	// get it here
+	live_match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
+	live_match.SetInt("timestamp", GetTime());
+//	
+//	
+//	
 	JSONArray heroes = new JSONArray();
+	
 	for(int i = 0; i < 10; i++){
 		
 		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
@@ -636,16 +638,28 @@ public void UpdateLiveMatch(){
 		JSONObject o = new JSONObject();
 		FillHeroData(o, heroEntity);	
 		FillPlayerData(o, i);
-		
+//		
 		heroes.Push(o);
-		
+		delete o;
 	}
-	
-	match.Set("heroes", heroes);
+
+
+	live_match.Set("heroes", heroes);
+	delete heroes;
 		
-	client.Post("live_match", match, OnLiveUpdated);
+	client.Post("live_match", live_match, OnLiveUpdated);
 	
-	CloseHandle(match);
+	delete live_match;
+}
+
+void OnLiveUpdated(HTTPResponse response, any value){
+	
+    if (response.Status != HTTPStatus_Created) {
+        // Failed to retrieve todo
+        PrintToServer("Bad status code %d", response.Status);
+        return;
+    }
+	
 }
 
 void Test123(){
