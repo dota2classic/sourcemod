@@ -709,7 +709,6 @@ bool GameHasActivePlayers(){
 		
 		int conState = GetConnectionState(i);
 		if(conState != 4){
-			PrintToServer("We have an active player still %d", conState)
 			hasActivePlayer = true;
 			break;
 		}
