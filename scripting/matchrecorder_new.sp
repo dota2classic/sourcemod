@@ -600,7 +600,9 @@ public void FillPlayerData(JSONObject o, int player){
 
 	char party_id[64];
 	GetPartyIdForSteamId(pid, party_id, sizeof(party_id));
-	o.SetString("party_id", party_id)
+	o.SetString("party_id", party_id);
+	int conStatus = GetConnectionState(player);
+	o.SetInt("connection", conStatus);
 	
 }
 
