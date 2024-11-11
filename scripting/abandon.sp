@@ -1,5 +1,6 @@
 #include <sdkhooks>
 #include <sdktools>
+#include <d2c>
 
 #pragma newdecls required
 
@@ -97,6 +98,7 @@ public void OnClientDisconnect(int client)
 	GetClientName(client, clientNames[playerIndex], 32);
 	PrintToServer("Create timer called!")
 	CreateTimer(1.0, Timer_CountMinutesDisconnected, playerIndex, TIMER_REPEAT);
+	//CreateTimer(1, Timer_CountMinutesDisconnected, playerIndex, TIMER_REPEAT);
 }
 
 public Action Timer_CountMinutesDisconnected(Handle timer, int playerID)
@@ -136,4 +138,5 @@ public void AbandonPlayer(int playerID)
 	SetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, 4, playerID);
 	PrintCenterTextAll("%c%s\x01 has abandoned the game.", GetPlayerColor(playerID), clientNames[playerID]);
 	PrintToServer("Player Abandoned: %i, %s", steamID32, clientNames[playerID]);
+	OnAbandon(steamID32);
 }

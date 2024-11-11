@@ -8,7 +8,22 @@
 
 #include <base64>
 
-
+ enum DOTA_GameState 
+ {
+   DOTA_GAMERULES_STATE_INIT = 0,
+   DOTA_GAMERULES_STATE_WAIT_FOR_PLAYERS_TO_LOAD = 1,
+   DOTA_GAMERULES_STATE_HERO_SELECTION = 2,
+   DOTA_GAMERULES_STATE_STRATEGY_TIME = 3,
+   DOTA_GAMERULES_STATE_PRE_GAME = 4,
+   DOTA_GAMERULES_STATE_GAME_IN_PROGRESS = 5,
+   DOTA_GAMERULES_STATE_POST_GAME = 6,
+   DOTA_GAMERULES_STATE_DISCONNECT = 7,
+   DOTA_GAMERULES_STATE_TEAM_SHOWCASE = 8,
+   DOTA_GAMERULES_STATE_CUSTOM_GAME_SETUP = 9,
+   DOTA_GAMERULES_STATE_WAIT_FOR_MAP_TO_LOAD = 10,
+   DOTA_GAMERULES_STATE_SCENARIO_SETUP = 11,
+   DOTA_GAMERULES_STATE_LAST = 12
+ }
 
 enum GameMode 
 { 
@@ -19,6 +34,8 @@ enum GameMode
 	GameMode_Greeviling = 4,
 	GameMode_AbilityDraft = 5,
 }
+
+native void OnAbandon(steam_id);
 
 public GetIntProperty(index, String:prop[]){
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, prop, 4, index)

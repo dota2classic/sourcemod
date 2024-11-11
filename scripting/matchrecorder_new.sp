@@ -37,6 +37,23 @@ int expected_player_count = 0;
 
 HTTPClient client;
 
+
+
+// NATIVE IMPLEMENTATION
+
+int Native_OnAbandon(Handle plugin, int params){
+	int steamID = GetNativeCell(1);
+	ReportAbandonedPlayer(steamID);
+	return 0;
+}
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	CreateNative("OnAbandon", Native_OnAbandon);
+	return APLRes_Success;
+}
+//
+
 public void OnMapStart()
 {
 	PrintToServer("Map start called");
@@ -82,6 +99,7 @@ public void OnPluginStart()
 	
 	
 	CreateTimer(4.0, OnGameUpdate, 0, TIMER_REPEAT);
+	CreateTimer(1.0, CheckIsGameViable, 0, TIMER_REPEAT);
 	
     RegServerCmd("test1", Command_Test);
 //    Test123();
@@ -662,6 +680,58 @@ void OnLiveUpdated(HTTPResponse response, any value){
         return;
     }
 	
+}
+
+public Action CheckIsGameViable(Handle timer)
+{
+	int gameState = GameRules_GetProp("m_nGameState", 4, 0);
+	if (gameState != DOTA_GAMERULES_STATE_PRE_GAME && gameState != DOTA_GAMERULES_STATE_GAME_IN_PROGRESS)
+	{
+		return Action:0;
+	}
+	
+	if(!GameHasActivePlayers()){
+		PrintToServer("Everybody left the game, i shut down.");
+		Shutdown(INVALID_HANDLE);
+	}
+}
+
+// Check is there any active players at all?
+bool GameHasActivePlayers(){
+	
+	bool hasActivePlayer = false;
+	
+	for(int i = 0; i < 10; i++){
+		int pid = GetSteamid(i);
+		
+		// It's a bot
+		if(pid <= 10) continue;
+		
+		int conState = GetConnectionState(i);
+		if(conState != 4){
+			PrintToServer("We have an active player still %d", conState)
+			hasActivePlayer = true;
+			break;
+		}
+	}
+	
+	return hasActivePlayer;
+}
+
+
+void ReportAbandonedPlayer(int steamID){
+	PrintToServer("I send request that player %d did abandon", steamID)
+	
+	JSONObject abandonDto = new JSONObject();
+	abandonDto.SetInt("steam_id", steamID);
+	abandonDto.SetInt("match_id", match_id);
+	abandonDto.SetInt("mode", lobbyType);
+	abandonDto.SetString("server", server_url);
+	
+	
+	client.Post("player_abandon", abandonDto, OnLiveUpdated);
+	
+	delete abandonDto;
 }
 
 void Test123(){
