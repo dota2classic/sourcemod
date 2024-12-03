@@ -65,7 +65,7 @@ public void OnMapStart()
     PrintToServer("lobby type is: %d", lobbyType)
     if(lobbyType == 7){
     	// Bot lobby
-		PopulateBots(4);
+		PopulateBots(2); // 2 = hard
     }
 }
 
