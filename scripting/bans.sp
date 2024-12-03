@@ -148,32 +148,25 @@ public void hasDraftStageStarted()
 
 public void banHeroes()
 {
-	int num_heroes_to_ban = nominatedHeroes.Length / 2;
 	
-	if (nominatedHeroes.Length % 2 == 1)
-	{
-		num_heroes_to_ban = RoundToNearest(GetURandomFloat()) + num_heroes_to_ban;
-	}
-	if (num_heroes_to_ban)
-	{
-	}
-	else
+	if(nominatedHeroes.Length == 0)
 	{
 		PrintToChatAll("Все герои доступны к выбору.");
+		return;
 	}
-	while (0 < num_heroes_to_ban)
-	{
-		int index = GetRandomInt(0, nominatedHeroes.Length + -1);
+	// todo: iterate over all heroes and rol individually
+	for(int i = 0; i < nominatedHeroes.Length; i++){
+		bool isBanned = GetRandomFloat() > 0.3; // lets not 50-50 here
+		if(!isBanned) continue;
+		
 		char heroName[64];
-		nominatedHeroes.GetString(index, heroName, 64);
+		nominatedHeroes.GetString(i, heroName, 64);
 		char actualHeroName[64];
 		actualHeroNames.GetString(heroName, actualHeroName, 64);
 		PrintToChatAll("%s был запрещен.", actualHeroName);
 		bannedHeroes.PushString(heroName);
-		nominatedHeroes.Erase(index);
-		num_heroes_to_ban--;
 	}
-	return 0;
+	
 }
 
 public Action restrictPickingBannedHero(int client, char[] command, any args)
