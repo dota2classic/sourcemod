@@ -17,9 +17,7 @@ bool suggestionMap[10];
 
 public void OnPluginStart()
 {
-	AddCommandListener(restrictPickingBannedHero, "dota_select_hero");
-	AddCommandListener(Command_Say, "say");
-	AddCommandListener(Command_Say, "say_team");
+	
 }
 
 public void OnMapStart()
@@ -33,17 +31,20 @@ public void OnMapStart()
 	PrintToServer("GameMopde: %d", GameRules_GetProp("m_iGameMode", 4, 0));
 	if (GameRules_GetProp("m_iGameMode", 4, 0) == 22)
 	{
-		CreateTimer(5.0, HookGameRulesStateChange, any:0, 0);
-		
 		enable = true;
 	}
 	else
 	{
 		enable = false;
+		return;
 	}
 	
+	HookEvent("game_rules_state_change", OnGameStateChange, EventHookMode:1);
+	AddCommandListener(restrictPickingBannedHero, "dota_select_hero");
+	AddCommandListener(Command_Say, "say");
+	AddCommandListener(Command_Say, "say_team");
+	
 	PrintToServer("Enable bans: %d", enable);
-	CreateTimer(5.0, HookGameRulesStateChange, any:0, 0);
 }
 
 
@@ -107,13 +108,6 @@ public void NonimateBan(int client, char[] hero){
 		PrintToChatAll("%s был предложен к запрету.", realName);
 	
 	suggestionMap[client] = true;
-}
-
-
-public Action HookGameRulesStateChange(Handle timer)
-{
-	HookEvent("game_rules_state_change", OnGameStateChange, EventHookMode:1);
-	return Plugin_Continue;
 }
 
 public Action OnGameStateChange(Handle event, char[] name, bool dontBroadcast)
