@@ -37,13 +37,20 @@ int expected_player_count = 0;
 
 HTTPClient client;
 
+int abandonCount = 0;
 
 
 // NATIVE IMPLEMENTATION
 
 int Native_OnAbandon(Handle plugin, int params){
 	int steamID = GetNativeCell(1);
-	ReportAbandonedPlayer(steamID);
+	ReportAbandonedPlayer(steamID, abandonCount);
+	if(abandonCount == 0){
+		PrintToChatAll("Эту игру можно покинуть.");
+		PrintToChatAll("Если вы покинете игру, то потеряете рейтинг, но не получите бан поиска.");
+	}
+
+	abandonCount++;
 	return 0;
 }
 
@@ -726,12 +733,13 @@ bool GameHasActivePlayers(){
 }
 
 
-void ReportAbandonedPlayer(int steamID){
+void ReportAbandonedPlayer(int steamID, int abandonIndex){
 	PrintToServer("I send request that player %d did abandon", steamID)
 
 	JSONObject abandonDto = new JSONObject();
 	abandonDto.SetInt("steam_id", steamID);
 	abandonDto.SetInt("match_id", match_id);
+	abandonDto.SetInt("abandon_index", abandonIndex);
 	abandonDto.SetInt("mode", lobbyType);
 	abandonDto.SetString("server", server_url);
 

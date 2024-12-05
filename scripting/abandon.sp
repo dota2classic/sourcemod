@@ -126,7 +126,7 @@ public Action Timer_CountMinutesDisconnected(Handle timer, int playerID)
 	if (disconnectTime[playerID] % 60 == 0)
 	{
 		int minutesRemaining = (300 - disconnectTime[playerID]) / 60;
-		PrintCenterTextAll("%c%s\x01 has %i minutes left to reconnect.", GetPlayerColor(playerID), clientNames[playerID], minutesRemaining);
+		PrintCenterTextAll("%c%s\x01 осталось %i минут, чтобы переподключиться.", GetPlayerColor(playerID), clientNames[playerID], minutesRemaining);
 	}
 	
 	return Plugin_Continue;
@@ -136,7 +136,7 @@ public void AbandonPlayer(int playerID)
 {
 	int steamID32 = GetPlayerSteamID(playerID);
 	SetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iConnectionState", 4, 4, playerID);
-	PrintCenterTextAll("%c%s\x01 has abandoned the game.", GetPlayerColor(playerID), clientNames[playerID]);
+	PrintCenterTextAll("%c%s\x01 покинул игру.", GetPlayerColor(playerID), clientNames[playerID]);
 	PrintToServer("Player Abandoned: %i, %s", steamID32, clientNames[playerID]);
 	OnAbandon(steamID32);
 }
