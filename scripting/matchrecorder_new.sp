@@ -354,6 +354,7 @@ public void OnClientPutInServer(int client)
 		int team = GetTeamForSteamID(steamId)
 		if(team != -1){
 			ChangeClientTeam(client, team);
+			ReportPlayerConnected(steamId);
 		}else{
 			KickClient(client, "Вы не участник игры");
 		}
@@ -732,6 +733,19 @@ bool GameHasActivePlayers(){
 	return hasActivePlayer;
 }
 
+
+void ReportPlayerConnected(int steamID){
+	PrintToServer("I send request that player %d did connect", steamID)
+
+	JSONObject abandonDto = new JSONObject();
+	abandonDto.SetInt("steam_id", steamID);
+	abandonDto.SetInt("match_id", match_id);
+	abandonDto.SetString("server", server_url);
+
+	client.Post("player_connect", abandonDto, OnLiveUpdated);
+
+	delete abandonDto;
+}
 
 void ReportAbandonedPlayer(int steamID, int abandonIndex){
 	PrintToServer("I send request that player %d did abandon", steamID)
