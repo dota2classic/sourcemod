@@ -58,10 +58,13 @@ public void OnMapStart()
 {
 	PrintToServer("Map start called");
     PopulatePlayerDataInPlayerResource();
-//    SetPlayersToStartGame();
+
+
+    // Start recording
+    StartRecording();
 
     SetPlayersToStart(expected_player_count);
-    
+
     PrintToServer("lobby type is: %d", lobbyType)
     if(lobbyType == 7){
     	// Bot lobby
@@ -74,54 +77,59 @@ public void OnPluginStart()
 	int iPort = GetConVarInt(FindConVar( "hostport" ));
 
 	PrintToServer("PLUGIN LOADED %d", iPort);
-	
+
 	ReadMatchData();
-	
-	
+
 	HookEvent("dota_match_done", OnMatchFinish, EventHookMode:0);
 	HookEvent("game_rules_state_change", OnMatchStart, EventHookMode:0)
-	
+
 
 	AddCommandListener(Command_jointeam, "jointeam");
 
 	AddCommandListener(Command_Say, "say");
 	AddCommandListener(Command_Say, "say_team");
-	
+
 	client = new HTTPClient("http://localhost:7777");
-	
+
 	GetCommandLineParamStr("+con_logfile", logfile, 256, "logs/");
 	if (StrContains(logfile, ".log", true) == -1)
 	{
 		StrCat(logfile, sizeof(logfile), ".log");
 	}
-	
+
 	PrintToServer("LogFile %s", logfile);
-	
-	
+
+
 	CreateTimer(4.0, OnGameUpdate, 0, TIMER_REPEAT);
 	CreateTimer(1.0, CheckIsGameViable, 0, TIMER_REPEAT);
-	
+
     RegServerCmd("test1", Command_Test);
 //    Test123();
+}
+
+public void StartRecording(){
+    PrintToServer("StartRecording called");
+    ServerCommand("tv_record replays/%d.dem", match_id);
+    PrintToServer("Server command executed: tv_record replays/%d.dem", match_id);
 }
 
 
 public void ReadMatchData(){
 	char buffer[4096];
 	GetCommandLineParamJson("-match", buffer, sizeof(buffer), "{}");
-	
+
 	matchData = JSONObject.FromString(buffer);
-	
+
 	PrintToServer("%s", buffer);
-	
+
 	matchData.GetString("url", server_url, sizeof(server_url));
 	match_id = matchData.GetInt("matchId");
-	
+
 	GSMatchInfo = matchData.Get("info");
-	
+
 	lobbyType = GSMatchInfo.GetInt("mode")
 
-	
+
 	PrintToServer("Match ID: %d", match_id);
 	PrintToServer("Mode: %d", lobbyType);
 	PrintToServer("Running on server: %s", server_url);
@@ -130,13 +138,13 @@ public void ReadMatchData(){
 	JSONArray players = GSMatchInfo.Get("players");
 	expected_player_count = players.Length;
 
-	
-	
+
+
 }
 
 
 public JSONObject GetPlayer(int index){
-	JSONArray players = GSMatchInfo.Get("players")	
+	JSONArray players = GSMatchInfo.Get("players")
 	return players.Get(index);
 }
 
@@ -158,7 +166,7 @@ public int GetAssignedPlayerSteamID(int index){
 	char buffer[32];
 	JSONObject pid = plr.Get("playerId");
 	pid.GetString("value", buffer, sizeof(buffer));
-	return StringToInt(buffer);	
+	return StringToInt(buffer);
 }
 
 
@@ -215,9 +223,9 @@ public void PopulatePlayerDataInPlayerResource()
 }
 
 public bool PlayerInMatchJSON(JSONObject matchResult, int index){
-	
+
 	int steamid = GetSteamid(index)
-		
+
 	bool hasPlayer = IsValidEntity(GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", index));
 
 	if(!hasPlayer){
@@ -228,40 +236,40 @@ public bool PlayerInMatchJSON(JSONObject matchResult, int index){
 	GetHero(index, heroName)
 
 	matchResult.SetString("hero", heroName);
-	
+
 	bool hasParty = GetPartyIdForSteamId(steamid, heroName, sizeof(heroName));
 	if(hasParty){
 		matchResult.SetString("party_id", heroName);
 	} else {
 		matchResult.SetNull("party_id")
 	}
-	
+
 	matchResult.SetInt("steam_id", steamid);
 	matchResult.SetInt("team",  GetTeam(index) );
 	matchResult.SetInt("level",  GetLevel(index) );
-	
+
 	matchResult.SetInt("kills",  GetKills(index) );
 	matchResult.SetInt("deaths",  GetDeaths(index) );
 	matchResult.SetInt("assists",  GetAssists(index) );
-	
+
 	matchResult.SetInt("gpm",   GetGPM(index) );
 	matchResult.SetInt("xpm",   GetXPM(index) );
-	
+
 	matchResult.SetInt("last_hits",   GetLasthits(index) );
 	matchResult.SetInt("denies",  GetDenies(index));
-	
+
 	matchResult.SetInt("tower_kills", GetIntProperty(index, "m_iTowerKills"));
 	matchResult.SetInt("roshan_kills", GetIntProperty(index, "m_iRoshanKills"));
 	matchResult.SetFloat("roshan_kills", GetFloatProperty(index, "m_fHealing"));
-	
-	
+
+
 	matchResult.SetInt("networth", GetNetworth(index));
-	
-	
-	
+
+
+
 	int conStatus = GetConnectionState(index);
 	matchResult.SetInt("connection", conStatus);
-	
+
 
 	JSONArray items = new JSONArray();
 
@@ -275,7 +283,7 @@ public void GenerateMatchResults(bool save){
 
 	int winnerTeam = GameRules_GetProp("m_nGameWinner", 4, 0);
 //
-	
+
 	JSONObject dto = new JSONObject();
 	dto.SetInt("matchId", match_id);
 	dto.SetInt("winner", winnerTeam);
@@ -284,14 +292,14 @@ public void GenerateMatchResults(bool save){
 	dto.SetInt("gameMode", GameRules_GetProp("m_iGameMode", 4, 0));
 	dto.SetInt("timestamp", GetTime());
 	dto.SetString("server", server_url);
-	
+
 	JSONArray players = new JSONArray();
-	
+
 	int heroCount = 0;
 
 	for (int i = 0; i < 10; i++){
 		JSONObject playerObject = new JSONObject();
-		
+
 		bool good = PlayerInMatchJSON(playerObject, i);
 		PrintToServer("PIM [%d] processed, ok: %d", i, good);
 		if(good){
@@ -299,19 +307,19 @@ public void GenerateMatchResults(bool save){
 			heroCount++;
 		}
 	}
-	
+
 	dto.Set("players", players);
-	
+
 //	if(heroCount != 2 && heroCount != 10){
 //		PrintToChatAll("Матч не будет сохранен: неполная игра");
 //		return;
 //	}
-	
+
 	char buffer[12000];
-	
+
 	dto.ToString(buffer, sizeof(buffer));
 	PrintToServer("%s", buffer);
-	
+
 	if(save){
 		client.Post("match_results", dto, OnMatchSaved);
 	}
@@ -325,7 +333,7 @@ void OnMatchSaved(HTTPResponse response, any value)
         return;
     }
 	PrintToChatAll("Матч сохранен.");
-} 
+}
 
 
 
@@ -408,17 +416,17 @@ public int GetTeamForSteamID(int steamId){
 	JSONArray players = GSMatchInfo.Get("players");
 	for(int iElement = 0; iElement < players.Length; iElement++) {
 		JSONObject plr = players.Get(iElement);
-		
+
 		char buffer[32];
 		JSONObject pid = plr.Get("playerId");
 		pid.GetString("value", buffer, sizeof(buffer));
-		
+
 		int check = StringToInt(buffer);
 		if(check == steamId){
 			return plr.GetInt("team");
 		}
 	}
-	
+
 	return -1;
 }
 
@@ -427,13 +435,13 @@ public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
 	JSONArray players = GSMatchInfo.Get("players");
 	for(int iElement = 0; iElement < players.Length; iElement++) {
 		JSONObject plr = players.Get(iElement);
-		
+
 		char buffer[32];
 		JSONObject pid = plr.Get("playerId");
 		pid.GetString("value", buffer, sizeof(buffer));
-		
+
 		delete pid;
-		
+
 		int check = StringToInt(buffer);
 		if(check == steamId){
 			plr.GetString("partyId", partyId, partyIdSize);
@@ -441,12 +449,12 @@ public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
 			delete plr;
 			break;
 		}
-		
+
 		delete plr;
 	}
-	
+
 	delete players;
-	
+
 	return success;
 }
 
@@ -455,7 +463,7 @@ public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
 
 public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
 	int gameState = GameRules_GetProp("m_nGameState");
-	
+
 	// GameRules
 
 	PrintToServer("GameRules change to: %d", gameState);
@@ -468,7 +476,7 @@ public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
 		}
 	}else if(gameState == 7){
 		//Disconnect
-		// 
+		//
 		PrintToServer("FAILED TO LOAD SOME SHIT");
 		// Detect leavers
 		OnFailedMatch();
@@ -484,7 +492,7 @@ public Action OnFailedMatch(){
 		if(pid == 0) continue;
 		plr.SetInt("connection", GetConnectionState(i));
 		plr.SetInt("steam_id", pid);
-		
+
 		char party_id[64];
 		bool good = GetPartyIdForSteamId(pid, party_id, sizeof(party_id));
 		if(good){
@@ -492,16 +500,16 @@ public Action OnFailedMatch(){
 		} else {
 			plr.SetNull("party_id");
 		}
-		
+
 		plrs.Push(plr);
-		
+
 	}
-	
+
 	JSONObject dto = new JSONObject();
 	dto.Set("players", plrs);
 	dto.SetInt("match_id", match_id);
 	dto.SetString("server", server_url);
-	
+
 	client.Post("failed_match", dto, OnLiveUpdated);
 
 	// And then shutdown
@@ -540,7 +548,7 @@ public void GetPosition(int index, float vec[3])
 
 
 public void FillHeroData(JSONObject obj, int hero){
-	
+
 	// Is Bot?
 
 	// Position on map
@@ -548,43 +556,43 @@ public void FillHeroData(JSONObject obj, int hero){
 	GetEntPropVector(hero, Prop_Send, "m_vecOrigin", vec);
 	float full = 14144.0;
 	float half = full / 2;
-	
+
 	obj.SetFloat("pos_x", (vec[0] + half) / full);
 	obj.SetFloat("pos_y", (vec[1] + half) / full);
-	
+
 	// Angle
 	float angle = GetEntPropFloat(hero, Prop_Send, "m_angRotation[1]");
 	obj.SetFloat("angle", angle);
-	
+
 	// Hero name
 	char heroname[40];
 	GetEntityClassname(hero, heroname, sizeof(heroname));
 	obj.SetString("hero", heroname)
-	
+
 	// Level
 	obj.SetInt("level", GetEntProp(hero, Prop_Send, "m_iCurrentLevel"))
-	
+
 	// Health and mana
 	int max_health = GetEntProp(hero, Prop_Send, "m_iMaxHealth");
 	int health = GetEntProp(hero, Prop_Send, "m_iHealth");
 	obj.SetInt("health", health);
 	obj.SetInt("max_health", max_health);
-	
+
 	float max_mana = GetEntPropFloat(hero, Prop_Send, "m_flMaxMana");
 	float mana = GetEntPropFloat(hero, Prop_Send, "m_flMana");
 	obj.SetFloat("mana", mana);
 	obj.SetFloat("max_mana", max_mana);
-	
-	
+
+
 	// Respawn timer, todo: how it works?>
 	int duration = GetDuration()
 	float respawn_time = GetEntPropFloat(hero, Prop_Send, "m_flRespawnTime");
 	obj.SetFloat("respawn_time", respawn_time);
-	
+
 	float m_flRespawnTimePenalty = GetEntPropFloat(hero, Prop_Send, "m_flRespawnTimePenalty");
 	obj.SetInt("r_duration", duration);
-	
-	
+
+
 	// Items
 	JSONArray items = new JSONArray();
 	char buf[64];
@@ -599,7 +607,7 @@ public void FillHeroData(JSONObject obj, int hero){
 	}
 	obj.Set("items", items);
 	delete items;
-	
+
 	return obj;
 }
 
@@ -608,8 +616,8 @@ public void FillPlayerData(JSONObject o, int player){
 	o.SetInt("deaths", GetDeaths(player));
 	o.SetInt("assists", GetAssists(player));
 	o.SetInt("team", GetTeam(player));
-	
-	
+
+
 
 	int pid = GetSteamid(player);
 	o.SetInt("steam_id", pid);
@@ -621,7 +629,7 @@ public void FillPlayerData(JSONObject o, int player){
 	o.SetString("party_id", party_id);
 	int conStatus = GetConnectionState(player);
 	o.SetInt("connection", conStatus);
-	
+
 }
 
 public Action OnGameUpdate(Handle timer)
@@ -637,7 +645,7 @@ public Action OnGameUpdate(Handle timer)
 
 public void UpdateLiveMatch(){
 	JSONObject live_match = new JSONObject();
-	
+
 	live_match.SetInt("match_id", match_id);
 	live_match.SetInt("matchmaking_mode", lobbyType);
 	live_match.SetInt("duration", GetDuration());
@@ -645,20 +653,20 @@ public void UpdateLiveMatch(){
 //	// get it here
 	live_match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
 	live_match.SetInt("timestamp", GetTime());
-//	
-//	
-//	
+//
+//
+//
 	JSONArray heroes = new JSONArray();
-	
+
 	for(int i = 0; i < 10; i++){
-		
+
 		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
 		if(!IsValidEntity(heroEntity)) continue;
-		
+
 		JSONObject o = new JSONObject();
-		FillHeroData(o, heroEntity);	
+		FillHeroData(o, heroEntity);
 		FillPlayerData(o, i);
-//		
+//
 		heroes.Push(o);
 		delete o;
 	}
@@ -666,20 +674,20 @@ public void UpdateLiveMatch(){
 
 	live_match.Set("heroes", heroes);
 	delete heroes;
-		
+
 	client.Post("live_match", live_match, OnLiveUpdated);
-	
+
 	delete live_match;
 }
 
 void OnLiveUpdated(HTTPResponse response, any value){
-	
+
     if (response.Status != HTTPStatus_Created) {
         // Failed to retrieve todo
         PrintToServer("Bad status code %d", response.Status);
         return;
     }
-	
+
 }
 
 public Action CheckIsGameViable(Handle timer)
@@ -689,7 +697,7 @@ public Action CheckIsGameViable(Handle timer)
 	{
 		return Action:0;
 	}
-	
+
 	if(!GameHasActivePlayers()){
 		PrintToServer("Everybody left the game, i shut down.");
 		Shutdown(INVALID_HANDLE);
@@ -698,72 +706,72 @@ public Action CheckIsGameViable(Handle timer)
 
 // Check is there any active players at all?
 bool GameHasActivePlayers(){
-	
+
 	bool hasActivePlayer = false;
-	
+
 	for(int i = 0; i < 10; i++){
 		int pid = GetSteamid(i);
-		
+
 		// It's a bot
 		if(pid <= 10) continue;
-		
+
 		int conState = GetConnectionState(i);
 		if(conState != 4){
 			hasActivePlayer = true;
 			break;
 		}
 	}
-	
+
 	return hasActivePlayer;
 }
 
 
 void ReportAbandonedPlayer(int steamID){
 	PrintToServer("I send request that player %d did abandon", steamID)
-	
+
 	JSONObject abandonDto = new JSONObject();
 	abandonDto.SetInt("steam_id", steamID);
 	abandonDto.SetInt("match_id", match_id);
 	abandonDto.SetInt("mode", lobbyType);
 	abandonDto.SetString("server", server_url);
-	
-	
+
+
 	client.Post("player_abandon", abandonDto, OnLiveUpdated);
-	
+
 	delete abandonDto;
 }
 
 void Test123(){
-	
-	
+
+
 //	int i = -1;
 //	int ent = FindEntityByClassname(i, "npc_dota_tower");
 
 //	PrintToServer("Hey :)")
 //	int spec = FindEntityByClassname(-1, "dota_data_spectator");
-//	
+//
 //	for(int i = 0; i < 10; i++){
 //			int totalGold = GetEntProp(spec, Prop_Send, "m_iNetWorth", 4, i);
-//	
+//
 //		PrintToServer("[%d] %d networth", i, totalGold);
 //	}
 //	for(int i = 0; i < 10; i++){
 //		PrintToServer("%d events", GetIntProperty(i, "m_iMetaLevel"));
-//		
+//
 //	}
 
 //
 //	for(int i = 0; i < 5000; i++){
 //		if(!IsValidEntity(i)) continue;
-//		
+//
 //		char nc[64];
 //		GetEntityNetClass(i, nc, sizeof(nc));
-//		
+//
 //		if(!strcmp(nc, "CDOTA_DataSpectator", false)){
 //			GetEntityClassname(i, nc, sizeof(nc))
 //			PrintToServer("%s c", nc);
 //		}
 //	}
-	
+
 
 }
