@@ -87,8 +87,11 @@ public void OnPluginStart()
 
 	ReadMatchData();
 
+
+	// Disable pause on loading
+
 	HookEvent("dota_match_done", OnMatchFinish, EventHookMode:0);
-	HookEvent("game_rules_state_change", OnMatchStart, EventHookMode:0)
+	HookEvent("game_rules_state_change", OnGameRulesStateChange, EventHookMode:0)
 
 
 	AddCommandListener(Command_jointeam, "jointeam");
@@ -407,7 +410,7 @@ public Action Command_Say(int client, const char[] command, int argc)
 	{
 		// PopulatePlayerDataInPlayerResource();
 		// OnMatchFinished(false);
-		Tests();
+//		Tests();
 	}
 }
 
@@ -469,23 +472,21 @@ public bool GetPartyIdForSteamId(int steamId, char[] partyId, int partyIdSize){
 
 
 
-public Action OnMatchStart(Handle event, char[] name, bool dontBroadcast){
+public Action OnGameRulesStateChange(Handle event, char[] name, bool dontBroadcast){
 	int gameState = GameRules_GetProp("m_nGameState");
 
 	// GameRules
 
 	PrintToServer("GameRules change to: %d", gameState);
 
-	if(gameState == 3){
-		// HERO_SELECTION
-		// check if all players are here
-		if(GetPlayersCount() < expected_player_count){
-			// not enough players
-		}
-	}else if(gameState == 7){
-		//Disconnect
-		//
-		PrintToServer("FAILED TO LOAD SOME SHIT");
+	if(gameState == DOTA_GAMERULES_STATE_WAIT_FOR_PLAYERS_TO_LOAD) {
+		ServerCommand("dota_allow_pause_in_match 0");
+		PrintToServer("Disabled pause while waiting for players to connect");
+	}else if(gameState == DOTA_GAMERULES_STATE_PRE_GAME) {
+		ServerCommand("dota_allow_pause_in_match 1");
+		PrintToServer("Enabling pause back: game started");
+	} else if(gameState == DOTA_GAMERULES_STATE_DISCONNECT){
+		PrintToServer("Players failed to load");
 		// Detect leavers
 		OnFailedMatch();
 	}
@@ -643,43 +644,41 @@ public void FillPlayerData(JSONObject o, int player){
 public Action OnGameUpdate(Handle timer)
 {
 	int gameState = GameRules_GetProp("m_nGameState", 4, 0);
-	if (gameState != 4 && gameState != 5)
+	if (gameState > DOTA_GAMERULES_STATE_INIT && gameState < DOTA_GAMERULES_STATE_TEAM_SHOWCASE)
 	{
-		return Action:0;
+		UpdateLiveMatch(gameState);
 	}
-	UpdateLiveMatch();
+	
 }
 
-
-public void UpdateLiveMatch(){
+public void UpdateLiveMatch(DOTA_GameState gameState){
 	JSONObject live_match = new JSONObject();
 
 	live_match.SetInt("match_id", match_id);
 	live_match.SetInt("matchmaking_mode", lobbyType);
 	live_match.SetInt("duration", GetDuration());
 	live_match.SetString("server", server_url);
-//	// get it here
 	live_match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
+	live_match.SetInt("game_state",  GameRules_GetProp("m_nGameState", 4, 0));
 	live_match.SetInt("timestamp", GetTime());
-//
-//
-//
+
+
+	
 	JSONArray heroes = new JSONArray();
-
-	for(int i = 0; i < 10; i++){
-
-		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
-		if(!IsValidEntity(heroEntity)) continue;
-
-		JSONObject o = new JSONObject();
-		FillHeroData(o, heroEntity);
-		FillPlayerData(o, i);
-//
-		heroes.Push(o);
-		delete o;
+	// To avoid bad stuff, we only iterate when we are sure
+	if(gameState >= DOTA_GAMERULES_STATE_PRE_GAME && gameState <= DOTA_GAMERULES_STATE_DISCONNECT){
+		for(int i = 0; i < 10; i++){
+	
+			int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
+			if(!IsValidEntity(heroEntity)) continue;
+	
+			JSONObject o = new JSONObject();
+			FillHeroData(o, heroEntity);
+			FillPlayerData(o, i);
+			heroes.Push(o);
+			delete o;
+		}
 	}
-
-
 	live_match.Set("heroes", heroes);
 	delete heroes;
 
