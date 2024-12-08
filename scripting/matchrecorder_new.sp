@@ -636,8 +636,6 @@ public void FillPlayerData(JSONObject o, int player){
 	char party_id[64];
 	GetPartyIdForSteamId(pid, party_id, sizeof(party_id));
 	o.SetString("party_id", party_id);
-	int conStatus = GetConnectionState(player);
-	o.SetInt("connection", conStatus);
 
 }
 
@@ -665,19 +663,30 @@ public void UpdateLiveMatch(DOTA_GameState gameState){
 
 	
 	JSONArray heroes = new JSONArray();
-	// To avoid bad stuff, we only iterate when we are sure
-	if(gameState >= DOTA_GAMERULES_STATE_PRE_GAME && gameState <= DOTA_GAMERULES_STATE_DISCONNECT){
-		for(int i = 0; i < 10; i++){
-	
-			int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
-			if(!IsValidEntity(heroEntity)) continue;
-	
+	for(int i = 0; i < 10; i++){
+		int steam_id = GetSteamid(i);
+		PrintToServer("hello %d", steam_id);
+
+		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
+		
+		JSONObject slot = new JSONObject();
+		if(IsValidEntity(heroEntity)){
 			JSONObject o = new JSONObject();
 			FillHeroData(o, heroEntity);
 			FillPlayerData(o, i);
-			heroes.Push(o);
+			slot.Set("hero_data", o);
 			delete o;
 		}
+		
+		
+		int conStatus = GetConnectionState(i);
+		slot.SetInt("team", GetTeam(i));
+		slot.SetInt("steam_id", steam_id);
+		slot.SetInt("connection", conStatus);
+
+		
+		heroes.Push(slot);
+		delete slot;
 	}
 	live_match.Set("heroes", heroes);
 	delete heroes;
