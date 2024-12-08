@@ -652,12 +652,14 @@ public Action OnGameUpdate(Handle timer)
 public void UpdateLiveMatch(DOTA_GameState gameState){
 	JSONObject live_match = new JSONObject();
 
+	int gameState = GameRules_GetProp("m_nGameState", 4, 0)
+
 	live_match.SetInt("match_id", match_id);
 	live_match.SetInt("matchmaking_mode", lobbyType);
 	live_match.SetInt("duration", GetDuration());
 	live_match.SetString("server", server_url);
 	live_match.SetInt("game_mode", GameRules_GetProp("m_iGameMode", 4, 0));
-	live_match.SetInt("game_state",  GameRules_GetProp("m_nGameState", 4, 0));
+	live_match.SetInt("game_state", gameState);
 	live_match.SetInt("timestamp", GetTime());
 
 
@@ -670,7 +672,7 @@ public void UpdateLiveMatch(DOTA_GameState gameState){
 		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
 		
 		JSONObject slot = new JSONObject();
-		if(IsValidEntity(heroEntity)){
+		if(IsValidEntity(heroEntity) && gameState >= DOTA_GAMERULES_STATE_PRE_GAME){
 			JSONObject o = new JSONObject();
 			FillHeroData(o, heroEntity);
 			FillPlayerData(o, i);
