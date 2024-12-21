@@ -667,7 +667,6 @@ public void UpdateLiveMatch(DOTA_GameState gameState){
 	JSONArray heroes = new JSONArray();
 	for(int i = 0; i < 10; i++){
 		int steam_id = GetSteamid(i);
-		PrintToServer("hello %d", steam_id);
 
 		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
 		
