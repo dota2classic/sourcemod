@@ -46,8 +46,9 @@ int Native_OnAbandon(Handle plugin, int params){
 	int steamID = GetNativeCell(1);
 	ReportAbandonedPlayer(steamID, abandonCount);
 	if(abandonCount == 0){
-		PrintToChatAll("Эту игру можно покинуть.");
-		PrintToChatAll("Если вы покинете игру, то потеряете рейтинг, но не получите бан поиска.");
+		PrintToChatAll("Игрок покинул игру и испортил матч.");
+		PrintToChatAll("Если ты покинешь игру, то потеряешь рейтинг, но не получишь бан поиска.");
+		PrintToChatAll("Покинув игру, ты еще больше подставишь ваших союзников.");
 	}
 
 	abandonCount++;
@@ -358,6 +359,7 @@ public void OnClientPutInServer(int client)
 		if(team != -1){
 			ChangeClientTeam(client, team);
 			ReportPlayerConnected(steamId);
+			TagSteamIdWithIp(client, steamId);
 		}else{
 			KickClient(client, "Вы не участник игры");
 		}
@@ -646,7 +648,7 @@ public Action OnGameUpdate(Handle timer)
 	{
 		UpdateLiveMatch(gameState);
 	}
-	
+
 }
 
 public void UpdateLiveMatch(DOTA_GameState gameState){
@@ -663,13 +665,13 @@ public void UpdateLiveMatch(DOTA_GameState gameState){
 	live_match.SetInt("timestamp", GetTime());
 
 
-	
+
 	JSONArray heroes = new JSONArray();
 	for(int i = 0; i < 10; i++){
 		int steam_id = GetSteamid(i);
 
 		int heroEntity = GetEntPropEnt(GetPlayerResourceEntity(), Prop_Send, "m_hSelectedHero", i);
-		
+
 		JSONObject slot = new JSONObject();
 		if(IsValidEntity(heroEntity) && gameState >= DOTA_GAMERULES_STATE_PRE_GAME){
 			JSONObject o = new JSONObject();
@@ -678,14 +680,14 @@ public void UpdateLiveMatch(DOTA_GameState gameState){
 			slot.Set("hero_data", o);
 			delete o;
 		}
-		
-		
+
+
 		int conStatus = GetConnectionState(i);
 		slot.SetInt("team", GetTeam(i));
 		slot.SetInt("steam_id", steam_id);
 		slot.SetInt("connection", conStatus);
 
-		
+
 		heroes.Push(slot);
 		delete slot;
 	}
@@ -756,8 +758,23 @@ void ReportPlayerConnected(int steamID){
 	delete abandonDto;
 }
 
+void TagSteamIdWithIp(int clientIndex, int steamID) {
+    PrintToServer("I send request that player %d is tagged", steamID);
+    char ip[64];
+    GetClientIP(clientIndex, ip, sizeof(ip), true);
+
+    JSONObject ipTagDto = new JSONObject();
+	ipTagDto.SetInt("steam_id", steamID);
+	ipTagDto.SetInt("match_id", match_id);
+	ipTagDto.SetString("ip", ip);
+
+	client.Post("player_ip_tag", ipTagDto, OnLiveUpdated);
+
+	delete ipTagDto;
+}
+
 void ReportAbandonedPlayer(int steamID, int abandonIndex){
-	PrintToServer("I send request that player %d did abandon", steamID)
+	PrintToServer("I send request that player %d did abandon", steamID);
 
 	JSONObject abandonDto = new JSONObject();
 	abandonDto.SetInt("steam_id", steamID);
