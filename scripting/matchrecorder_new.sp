@@ -358,8 +358,7 @@ public void OnClientPutInServer(int client)
 		int team = GetTeamForSteamID(steamId)
 		if(team != -1){
 			ChangeClientTeam(client, team);
-			ReportPlayerConnected(steamId);
-			TagSteamIdWithIp(client, steamId);
+			ReportPlayerConnected(client, steamId);
 		}else{
 			KickClient(client, "Вы не участник игры");
 		}
@@ -745,32 +744,21 @@ bool GameHasActivePlayers(){
 }
 
 
-void ReportPlayerConnected(int steamID){
+void ReportPlayerConnected(int clientIndex, int steamID){
 	PrintToServer("I send request that player %d did connect", steamID)
 
-	JSONObject abandonDto = new JSONObject();
-	abandonDto.SetInt("steam_id", steamID);
-	abandonDto.SetInt("match_id", match_id);
-	abandonDto.SetString("server", server_url);
-
-	client.Post("player_connect", abandonDto, OnLiveUpdated);
-
-	delete abandonDto;
-}
-
-void TagSteamIdWithIp(int clientIndex, int steamID) {
-    PrintToServer("I send request that player %d is tagged", steamID);
-    char ip[64];
+	char ip[64];
     GetClientIP(clientIndex, ip, sizeof(ip), true);
 
-    JSONObject ipTagDto = new JSONObject();
-	ipTagDto.SetInt("steam_id", steamID);
-	ipTagDto.SetInt("match_id", match_id);
-	ipTagDto.SetString("ip", ip);
+	JSONObject connectDto = new JSONObject();
+	connectDto.SetInt("steam_id", steamID);
+	connectDto.SetInt("match_id", match_id);
+	connectDto.SetString("server", server_url);
+	connectDto.SetString("ip", ip);
 
-	client.Post("player_ip_tag", ipTagDto, OnLiveUpdated);
+	client.Post("player_connect", connectDto, OnLiveUpdated);
 
-	delete ipTagDto;
+	delete connectDto;
 }
 
 void ReportAbandonedPlayer(int steamID, int abandonIndex){
