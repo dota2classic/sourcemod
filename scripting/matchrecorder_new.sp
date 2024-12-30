@@ -76,7 +76,19 @@ public void OnMapStart()
     PrintToServer("lobby type is: %d", lobbyType)
     if(lobbyType == 7){
     	// Bot lobby
-		PopulateBots(2); // 2 = hard
+    	PrintToServer("SV_CHEATS 1 CALL");
+    	ServerCommand("sv_cheats 1");
+
+    	PrintToServer("dota_bot_set_difficulty 0 CALL");
+    	ServerCommand("dota_bot_set_difficulty 2");
+
+
+        PrintToServer("dota_bot_populate CALL");
+    	ServerCommand("dota_bot_populate");
+
+    	PrintToServer("SV_CHEATS 0 CALL");
+    	// ServerCommand("sv_cheats 0");
+		// PopulateBots(2); // 2 = hard
     }
 }
 
