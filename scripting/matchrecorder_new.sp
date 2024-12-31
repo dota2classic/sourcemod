@@ -80,7 +80,7 @@ public void OnMapStart()
     	ServerCommand("sv_cheats 1");
 
     	PrintToServer("dota_bot_set_difficulty 0 CALL");
-    	ServerCommand("dota_bot_set_difficulty 1");
+    	ServerCommand("dota_bot_set_difficulty 0");
 
 
         PrintToServer("dota_bot_populate CALL");
