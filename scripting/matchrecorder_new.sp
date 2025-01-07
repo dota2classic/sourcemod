@@ -358,15 +358,27 @@ void OnMatchSaved(HTTPResponse response, any value)
 	PrintToChatAll("Матч сохранен.");
 }
 
-
+public void OnClientAuthorized(int client, const char[] auth){
+	
+	
+	if(!IsFakeClient(client)){
+		int steamId = GetSteamAccountID(client);
+		PrintToServer("OnClientAuthorized %d", steamId);
+		
+		int team = GetTeamForSteamID(steamId)
+		if(team == -1){
+			PrintToServer("Player %d is not part of game", steamId);
+			KickClient(client, "Вы не участник игры");	
+		}
+	}
+}
 
 public void OnClientPutInServer(int client)
 {
 
 	if(!IsFakeClient(client)){
 		int steamId = GetSteamAccountID(client);
-
-
+		
 		int team = GetTeamForSteamID(steamId)
 		if(team != -1){
 			ChangeClientTeam(client, team);
