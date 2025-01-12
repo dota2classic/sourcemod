@@ -74,7 +74,7 @@ public void OnMapStart()
     SetPlayersToStart(expected_player_count);
 
     PrintToServer("lobby type is: %d", lobbyType)
-    if(lobbyType == 7){
+    if(lobbyType == 7 || lobbyType == 12){
     	// Bot lobby
     	PrintToServer("SV_CHEATS 1 CALL");
     	ServerCommand("sv_cheats 1");
