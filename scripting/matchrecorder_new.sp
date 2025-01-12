@@ -69,7 +69,7 @@ public void OnMapStart()
 
 
     // Start recording
-    StartRecording();
+    StartRecording(lobbyType);
 
     SetPlayersToStart(expected_player_count);
 
@@ -130,10 +130,14 @@ public void OnPluginStart()
 //    Test123();
 }
 
-public void StartRecording(){
-    PrintToServer("StartRecording called");
-    ServerCommand("tv_record replays/%d.dem", match_id);
-    PrintToServer("Server command executed: tv_record replays/%d.dem", match_id);
+public void StartRecording(int lobbyType){
+    if(lobbyType == 7) {
+        PrintToServer("Not starting recording: bot match");
+    } else {
+        PrintToServer("StartRecording called");
+        ServerCommand("tv_record replays/%d.dem", match_id);
+        PrintToServer("Server command executed: tv_record replays/%d.dem", match_id);
+    }
 }
 
 
@@ -359,16 +363,16 @@ void OnMatchSaved(HTTPResponse response, any value)
 }
 
 public void OnClientAuthorized(int client, const char[] auth){
-	
-	
+
+
 	if(!IsFakeClient(client)){
 		int steamId = GetSteamAccountID(client);
 		PrintToServer("OnClientAuthorized %d", steamId);
-		
+
 		int team = GetTeamForSteamID(steamId)
 		if(team == -1){
 			PrintToServer("Player %d is not part of game", steamId);
-			KickClient(client, "Вы не участник игры");	
+			KickClient(client, "Вы не участник игры");
 		}
 	}
 }
@@ -378,7 +382,7 @@ public void OnClientPutInServer(int client)
 
 	if(!IsFakeClient(client)){
 		int steamId = GetSteamAccountID(client);
-		
+
 		int team = GetTeamForSteamID(steamId)
 		if(team != -1){
 			ChangeClientTeam(client, team);
