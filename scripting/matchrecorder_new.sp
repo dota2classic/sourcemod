@@ -75,20 +75,7 @@ public void OnMapStart()
 
     PrintToServer("lobby type is: %d", lobbyType)
     if(lobbyType == 7){
-    	// Bot lobby
-    	PrintToServer("SV_CHEATS 1 CALL");
-    	ServerCommand("sv_cheats 1");
-
-    	PrintToServer("dota_bot_set_difficulty 0 CALL");
-    	ServerCommand("dota_bot_set_difficulty 0");
-
-
-        PrintToServer("dota_bot_populate CALL");
     	ServerCommand("dota_bot_populate");
-
-    	PrintToServer("SV_CHEATS 0 CALL");
-    	// ServerCommand("sv_cheats 0");
-		// PopulateBots(2); // 2 = hard
     }
 }
 
@@ -224,7 +211,7 @@ public void PopulatePlayerDataInPlayerResource()
 	int id_offset = FindSendPropInfo("CDOTA_PlayerResource", "m_iPlayerSteamIDs");
 	int team_offset = FindSendPropInfo("CDOTA_PlayerResource", "m_iPlayerTeams");
 	int name_offset = FindSendPropInfo("CDOTA_PlayerResource", "m_iszPlayerNames");
-	int radiantIndex;
+	int radiantIndex = 0;
 	int direIndex = 5;
 	char name[32];
 	JSONArray players = GSMatchInfo.Get("players");
