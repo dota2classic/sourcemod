@@ -34,7 +34,6 @@ char callbackURL[1024];
 char logfile[256];
 
 int expected_player_count = 0;
-ServerCommand("dota_bot_populate");
 HTTPClient client;
 
 int abandonCount = 0;
