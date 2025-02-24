@@ -88,6 +88,8 @@ public void NonimateBan(int client, char[] hero){
 	
 	int steam32 = GetSteamid(client);
 	int playerIndex = GetPlayerIndex(steam32);
+	
+	PrintToServer("Nominating hero by sid=%d, pid=%d", steam32, playerIndex);
 
 	bool alreadySuggested = suggestionMap[playerIndex];
 	
