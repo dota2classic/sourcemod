@@ -52,6 +52,18 @@ public GetDuration(){
 	return total_time - non_game_time;
 }
 
+public int GetPlayerIndex(int steamID32)
+{
+	int steamIdOffset = FindSendPropInfo("CDOTA_PlayerResource", "m_iPlayerSteamIDs");
+	int resource = GetPlayerResourceEntity();
+    for(int i = 0 ; i < 10; i++){
+		int id = GetEntData(resource, i * 8 + steamIdOffset, 4);
+		if (steamID32 == id) return i;
+	}
+	return -1;
+}
+
+
 public int GetNetworth(index){
 	int spec = FindEntityByClassname(-1, "dota_data_spectator");
 	return GetEntProp(spec, Prop_Send, "m_iNetWorth", 4, index);

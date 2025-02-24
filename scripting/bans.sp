@@ -14,10 +14,12 @@ bool enable = false
 
 bool suggestionMap[10];
 
+char printPrefix[] = "\x01\x04[DOTA2CLASSIC]\x01";
+
 
 public void OnPluginStart()
 {
-	
+	RegConsoleCmd("ban", OnPlayerBan); 
 }
 
 public void OnMapStart()
@@ -29,6 +31,7 @@ public void OnMapStart()
 	fillInternalHeroNameByAlias();
 	fillActualHeroNames();
 	PrintToServer("GameMopde: %d", GameRules_GetProp("m_iGameMode", 4, 0));
+	enable = true;
 	if (GameRules_GetProp("m_iGameMode", 4, 0) == 22)
 	{
 		enable = true;
@@ -39,10 +42,8 @@ public void OnMapStart()
 		return;
 	}
 	
-	HookEvent("game_rules_state_change", OnGameStateChange, EventHookMode:1);
+	HookEvent("game_rules_state_change", OnGameStateChange, EventHookMode_Post);
 	AddCommandListener(restrictPickingBannedHero, "dota_select_hero");
-	AddCommandListener(Command_Say, "say");
-	AddCommandListener(Command_Say, "say_team");
 	
 	PrintToServer("Enable bans: %d", enable);
 }
@@ -72,21 +73,37 @@ public Action Command_Say(int client, const char[] command, int argc)
 	}
 }
 
+public Action OnPlayerBan(int client, int args) {
+	char hero[64];
+	GetCmdArg(1, hero, sizeof(hero));
+	
+	PrintToServer("sayString: '%s'", hero)
+		
+	NonimateBan(client, hero);
+}
+
 public void NonimateBan(int client, char[] hero){
-	bool alreadySuggested = suggestionMap[client];
+	if(!enable) return;
+	
+	int steam32 = GetSteamid(client);
+	int playerIndex = GetPlayerIndex(steam32);
+
+	bool alreadySuggested = suggestionMap[playerIndex];
 	
 	PrintToServer("Already suggested: %d", alreadySuggested);
 	
 	if(alreadySuggested){
-		PrintToChat(client, "Ты уже предложил запретить героя.");
-		 return;
+		PrintToServer("Already nominated for ban");
+		PrintToChat(client, "%s Ты уже предложил запретить героя.", printPrefix);
+		return;
 	}
 	
 	char realName[64];
 	bool didFind = internalHeroNameByAlias.GetString(hero, realName, sizeof(realName));
 	
 	if(!didFind){
-		PrintToChat(client, "Не нашел такого героя!");
+		PrintToServer("Hero not found for alias %s", hero);
+		PrintToChat(client, "%s Не нашел такого героя!", printPrefix);
 		return;
 	}
 	
@@ -94,7 +111,7 @@ public void NonimateBan(int client, char[] hero){
 	int alreadyNominated = nominatedHeroes.FindString(realName) != -1;
 	
 	if(alreadyNominated){
-		PrintToChat(client, "Герой уже предложен к запрету.");
+		PrintToChat(client, "%s Герой уже предложен к запрету.", printPrefix);
 		return;
 	}
 	
@@ -102,27 +119,18 @@ public void NonimateBan(int client, char[] hero){
 	
 	char prettyName[64];
 	bool hasPretty = actualHeroNames.GetString(realName, prettyName, sizeof(prettyName));
-	if(hasPretty)
-		PrintToChatAll("%s был предложен к запрету.", prettyName);
-	else
-		PrintToChatAll("%s был предложен к запрету.", realName);
+	PrintToChatAll("%s %s был предложен к запрету.", printPrefix, hasPretty ? prettyName : realName);
 	
-	suggestionMap[client] = true;
+	suggestionMap[playerIndex] = true;
 }
 
 public Action OnGameStateChange(Handle event, char[] name, bool dontBroadcast)
 {
-	CreateTimer(2.0, printInstructionsMsgToAll, any:0, 0);
-	CreateTimer(15.0, OnGameStateChangeDelayed, any:0, 0);
-	UnhookEvent("game_rules_state_change", OnGameStateChange, EventHookMode:1);
-	return Plugin_Continue;
-}
-
-public Action OnGameStateChangeDelayed(Handle timer)
-{
-	if (hasDraftStageStarted() && enable)
+	
+	if (HasDraftStageStarted() && enable)
 	{
-		banHeroes();
+		PrintToChatAll("%s Баним героев...", printPrefix);
+		CreateTimer(3.0, DoBanHeroes);
 		enable = false;
 	}
 	return Plugin_Continue;
@@ -131,36 +139,42 @@ public Action OnGameStateChangeDelayed(Handle timer)
 public Action printInstructionsMsgToAll(Handle timer)
 {
 	if(!enable) return Plugin_Continue;
-	PrintToChatAll("Запрети героя к выбору: /ban [название героя или сокращение]");
+	PrintToChatAll("%s Запрети героя к выбору: /ban [название героя или сокращение]", printPrefix);
 	return Plugin_Continue;
 }
 
-public void hasDraftStageStarted()
+public void HasDraftStageStarted()
 {
 	return GameRules_GetProp("m_nGameState", 4, 0) > 1;
 }
 
-public void banHeroes()
+public Action DoBanHeroes(Handle timer)
 {
 	
 	if(nominatedHeroes.Length == 0)
 	{
-		PrintToChatAll("Все герои доступны к выбору.");
-		return;
+		PrintToChatAll("%s Все герои доступны к выбору.", printPrefix);
+		return Plugin_Handled;
 	}
 	// todo: iterate over all heroes and rol individually
 	for(int i = 0; i < nominatedHeroes.Length; i++){
 		bool isBanned = GetRandomFloat() > 0.3; // lets not 50-50 here
-		if(!isBanned) continue;
-		
 		char heroName[64];
 		nominatedHeroes.GetString(i, heroName, 64);
 		char actualHeroName[64];
 		actualHeroNames.GetString(heroName, actualHeroName, 64);
-		PrintToChatAll("%s был запрещен.", actualHeroName);
+		
+		
+		if(!isBanned){
+			PrintToChatAll("% %s не был запрещен.", printPrefix, actualHeroName);
+			continue;
+		}
+		
+		
+		PrintToChatAll("%s %s был запрещен.", printPrefix, actualHeroName);
 		bannedHeroes.PushString(heroName);
 	}
-	
+	return Plugin_Handled;
 }
 
 public Action restrictPickingBannedHero(int client, char[] command, any args)
@@ -171,7 +185,7 @@ public Action restrictPickingBannedHero(int client, char[] command, any args)
 	bool heroIsBanned = bannedHeroes.FindString(heroName) != -1;
 	if (heroIsBanned)
 	{
-		PrintToChat(client, "Этот герой запрещен!");
+		PrintToChat(client, "%s Этот герой запрещен!", printPrefix);
 		return Plugin_Handled;
 	}
 	return Plugin_Continue
@@ -179,18 +193,16 @@ public Action restrictPickingBannedHero(int client, char[] command, any args)
 
 public void OnClientPutInServer(int client)
 {
-	if (enable)
-	{
-		CreateTimer(2.0, TimerCallBack, client, 0);
-	}
+	if(!enable) return;
+	CreateTimer(2.0, PrintInstructionToPlayer, client, 0);
 }
 
-public Action TimerCallBack(Handle timer, int client)
+public Action PrintInstructionToPlayer(Handle timer, int client)
 {
-	if (enable && IsClientInGame(client))
-	{
-		PrintToChat(client, "Запрети героя к выбору: /ban [название героя или сокращение]");
+	if(!enable || !IsClientInGame(client)){
+		 return Plugin_Continue;
 	}
+	PrintToChat(client, "%s Запрети героя к выбору: /ban [название героя или сокращение]", printPrefix);
 	return Plugin_Continue;
 }
 
