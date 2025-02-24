@@ -12,7 +12,8 @@ ArrayList nominatedHeroes;
 ArrayList bannedHeroes;
 bool enable = false
 
-bool suggestionMap[10];
+// weird stuff make it 24 its ok
+bool suggestionMap[24];
 
 char printPrefix[] = "\x01\x04[DOTA2CLASSIC]\x01";
 
