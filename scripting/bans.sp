@@ -49,31 +49,6 @@ public void OnMapStart()
 	PrintToServer("Enable bans: %d", enable);
 }
 
-
-public Action Command_Say(int client, const char[] command, int argc)
-{
-	char sayString[32];
-	GetCmdArg(1, sayString, sizeof(sayString));
-	GetCmdArgString(sayString, sizeof(sayString));
-	StripQuotes(sayString);
-	PrintToServer(sayString)
-	
-	char hero[64];
-	
-	SplitString(sayString, " ", hero, sizeof(hero));
-	
-	PrintToServer("sayString: '%s'", hero)
-	
-	if(!strcmp(hero, "/ban", false)){
-		PrintToServer("We are trying to ban...");
-		ReplaceString(sayString, sizeof(sayString), "/ban ", "");
-		PrintToServer("Hero to ban: %s", sayString);
-		
-		NonimateBan(client, sayString);
-		
-	}
-}
-
 public Action OnPlayerBan(int client, int args) {
 	char hero[64];
 	GetCmdArg(1, hero, sizeof(hero));
@@ -86,10 +61,15 @@ public Action OnPlayerBan(int client, int args) {
 public void NonimateBan(int client, char[] hero){
 	if(!enable) return;
 	
-	int steam32 = GetSteamid(client);
+	char steam32str1[64];
+	GetClientAuthId(client, AuthId_Steam3, steam32str1, sizeof(steam32str1))
+	
+	char steam32str[64];
+	substr(steam32str1, 5, strlen(steam32str1) - 2, steam32str, sizeof(steam32str));
+	int steam32 = StringToInt(steam32str);
 	int playerIndex = GetPlayerIndex(steam32);
 	
-	PrintToServer("Nominating hero by sid=%d, pid=%d", steam32, playerIndex);
+	PrintToServer("Nominating hero by ssid=%s sid=%d, pid=%d", steam32str, steam32, playerIndex);
 
 	bool alreadySuggested = suggestionMap[playerIndex];
 	
@@ -161,12 +141,14 @@ public Action DoBanHeroes(Handle timer)
 	}
 	// todo: iterate over all heroes and rol individually
 	for(int i = 0; i < nominatedHeroes.Length; i++){
-		bool isBanned = GetRandomFloat() > 0.3; // lets not 50-50 here
+		bool isBanned = GetRandomFloat() > 0.5; // lets not 50-50 here
 		char heroName[64];
 		nominatedHeroes.GetString(i, heroName, 64);
 		char actualHeroName[64];
 		actualHeroNames.GetString(heroName, actualHeroName, 64);
 		
+		
+		PrintToServer("Is banned? %b %s %s", isBanned, heroName, actualHeroName);
 		
 		if(!isBanned){
 			PrintToChatAll("% %s не был запрещен.", printPrefix, actualHeroName);

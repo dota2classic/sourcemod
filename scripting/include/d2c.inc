@@ -24,6 +24,22 @@
    DOTA_GAMERULES_STATE_SCENARIO_SETUP = 11,
    DOTA_GAMERULES_STATE_LAST = 12
  }
+ 
+stock char substr(char[] inpstr, int startpos, int len=-1, char[] outstr, int outSize)
+{
+    if (len == -1)
+    {
+        strcopy(outstr, outSize, inpstr[startpos]);
+    }
+    
+    else
+    {
+        strcopy(outstr, len, inpstr[startpos]);
+        outstr[len] = 0;
+    }
+
+    return outstr; 
+}
 
 enum GameMode 
 { 
